@@ -10,6 +10,19 @@ var wastelandRenderer = {
     dotNetRef: null,
     fuel: 100,
     scrap: 0,
+    speedRatio: 0.5, // Default to 50 (Half speed)
+
+    setSpeedRatio: function (val) {
+        // Map 1-100 to 0.25 - 1.0
+        // User wants 1 = 25% speed, 100 = 100% speed.
+        // val is 1-100.
+        var pct = val / 100;
+        // Simple linear for now: 100 is max, 0 is stop.
+        // But user asked for 1 = 25%.
+        // Let's do: 0.25 + (0.75 * (val / 100))
+        this.speedRatio = 0.25 + (0.75 * (val / 100));
+        if (this.speedRatio > 1.0) this.speedRatio = 1.0;
+    },
 
     init: function (canvasId, dotNetRef) {
         this.dotNetRef = dotNetRef;
@@ -25,10 +38,13 @@ var wastelandRenderer = {
         // Input Handling
         this.scene.actionManager = new BABYLON.ActionManager(this.scene);
         this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, (evt) => {
-            this.inputMap[evt.sourceEvent.key.toLowerCase()] = evt.sourceEvent.type == "keydown";
+            var key = evt.sourceEvent.key.toLowerCase();
+            this.inputMap[key] = true;
+            if (key === " ") evt.sourceEvent.preventDefault(); // Stop Scrolling
         }));
         this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, (evt) => {
-            this.inputMap[evt.sourceEvent.key.toLowerCase()] = evt.sourceEvent.type == "keydown";
+            var key = evt.sourceEvent.key.toLowerCase();
+            this.inputMap[key] = false;
         }));
 
         this.engine.runRenderLoop(() => {
@@ -248,6 +264,25 @@ var wastelandRenderer = {
         engine.position.y = 1.0;
         var engineMat = new BABYLON.StandardMaterial("engMat", scene);
         engineMat.diffuseColor = new BABYLON.Color3(0.2, 0.1, 0.1);
+
+        // --- WEAPONS: Twin Mounted Machine Guns ---
+        var gunMat = new BABYLON.StandardMaterial("gunMat", scene);
+        gunMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.1); // Black Metal
+
+        var createGun = (side) => {
+            var gun = BABYLON.MeshBuilder.CreateCylinder("gun" + side, { diameter: 0.15, height: 1.5 }, scene);
+            gun.parent = this.chassis;
+            gun.rotation.x = Math.PI / 2; // Point Forward
+            gun.position = new BABYLON.Vector3(side * 0.8, 1.2, 1.5); // Hood position
+            gun.material = gunMat;
+            return gun;
+        };
+        this.leftGun = createGun(-1);
+        this.rightGun = createGun(1);
+
+        this.projectiles = []; // Store active bullets
+        this.lastFireTime = 0;
+        // ------------------------------------------
         engine.material = engineMat;
 
         // Spikes (Front)
@@ -321,9 +356,13 @@ var wastelandRenderer = {
 
         // 1. Input
         var isTurbo = this.inputMap["shift"] || false;
-        var topSpeed = isTurbo ? 300 : 150; // [FIX] Sonic Speeds
-        var accelRate = isTurbo ? 150 : 80; // [FIX] Higher Torque
-        var turnRate = isTurbo ? 2.5 : 3.5; // Steer slower at turbo
+
+        var baseSpeed = 100 * this.speedRatio;
+        var baseAccel = 60 * this.speedRatio;
+
+        var topSpeed = isTurbo ? baseSpeed : (baseSpeed * 0.7);
+        var accelRate = isTurbo ? baseAccel : (baseAccel * 0.5);
+        var turnRate = isTurbo ? 2.5 : 3.5;
 
         var throttle = 0;
         var steer = 0;
@@ -401,7 +440,8 @@ var wastelandRenderer = {
             var emitBase = speedRatio * 50; // 0-50 particles
 
             // Add drift dust
-            var driftAngle = BABYLON.Vector3.GetAngleBetweenVectors(this.velocity.normalize(), forwardDir, BABYLON.Vector3.Up());
+            // [FIX] Use normalizeToNew() to avoid destroying original velocity vector
+            var driftAngle = BABYLON.Vector3.GetAngleBetweenVectors(this.velocity.normalizeToNew(), forwardDir, BABYLON.Vector3.Up());
             if (this.speed > 5 && driftAngle > 0.2) {
                 emitBase += 100; // Big puff on drift
             }
@@ -487,6 +527,17 @@ var wastelandRenderer = {
             if (this.scrapFields) this.scrapFields.forEach(s => this.createBlip(s, "Yellow", "resource"));
         }
         this.updateRadar();
+
+        // --- COMBAT UPDATE ---
+        var dt = this.scene.getAnimationRatio() * 0.016; // Delta Time approx
+
+        // Spacebar Fire
+        if (this.inputMap[" "]) {
+            this.fireMachineGun(this.scene);
+        }
+
+        this.updateProjectiles(dt);
+        // ---------------------
 
         // 14. HUD Update (Always run if defined)
         if (window.updateHud) {
@@ -1137,6 +1188,88 @@ var wastelandRenderer = {
 
             b.ui.left = uiX + "px";
             b.ui.top = uiY + "px";
+        }
+    },
+
+    // --- COMBAT SYSTEM ---
+    initCombat: function (scene) {
+        // Master Bullet (Hidden)
+        var master = BABYLON.MeshBuilder.CreateBox("masterBullet", { width: 0.1, height: 0.1, depth: 2 }, scene);
+        master.isVisible = false;
+        master.material = new BABYLON.StandardMaterial("tracer", scene);
+        master.material.emissiveColor = new BABYLON.Color3(1, 1, 0);
+        master.material.disableLighting = true;
+        this.masterBullet = master;
+        this.projectiles = [];
+    },
+
+    fireMachineGun: function (scene) {
+        if (!this.masterBullet) this.initCombat(scene);
+
+        var now = Date.now();
+        if (now - this.lastFireTime < 100) return; // Fire Rate Limit
+        this.lastFireTime = now;
+
+        var createBullet = (gunNode) => {
+            // Use Instance (Fast!)
+            var bullet = this.masterBullet.createInstance("b_" + now);
+            var pos = gunNode.getAbsolutePosition();
+            bullet.position.copyFrom(pos);
+
+            // Align with car rotation
+            bullet.rotation.y = -this.facingAngle;
+            // Note: Our car rotation logic is -facingAngle.
+            // Gun is child of car, so getAbsolutePosition helps, but rotation needs to match global.
+
+            bullet.material = new BABYLON.StandardMaterial("tracer", scene);
+            bullet.material.emissiveColor = new BABYLON.Color3(1, 1, 0); // Yellow/Gold
+            bullet.material.disableLighting = true;
+
+            // Velocity Vector (Forward based on Car Facing)
+            // Car "Forward" is -Z in this engine? Or +Z?
+            // In updateVehicle: z += Math.cos(this.facingAngle).
+            // So Forward vector is (Sin, 0, Cos).
+
+            var speed = 200; // Units per sec (Fast!)
+            var dir = new BABYLON.Vector3(Math.sin(this.facingAngle), 0, Math.cos(this.facingAngle));
+
+            this.projectiles.push({
+                mesh: bullet,
+                direction: dir,
+                speed: speed,
+                life: 2.0 // Seconds
+            });
+        };
+
+        createBullet(this.leftGun);
+        createBullet(this.rightGun);
+    },
+
+    updateProjectiles: function (dt) {
+        if (!this.projectiles) return;
+
+        for (var i = this.projectiles.length - 1; i >= 0; i--) {
+            var p = this.projectiles[i];
+            p.life -= dt;
+
+            if (p.life <= 0) {
+                p.mesh.dispose();
+                this.projectiles.splice(i, 1);
+                continue;
+            }
+
+            // Move
+            p.mesh.position.x += p.direction.x * p.speed * dt;
+            p.mesh.position.z += p.direction.z * p.speed * dt;
+
+            // Ground Collision (Simple: If below ground, puff and die)
+            var gy = this.getHeightAt(p.mesh.position.x, p.mesh.position.z);
+            if (p.mesh.position.y < gy) {
+                // Hit Ground
+                p.mesh.dispose();
+                this.projectiles.splice(i, 1);
+                // TODO: Spawn Particle Puff?
+            }
         }
     }
 };
