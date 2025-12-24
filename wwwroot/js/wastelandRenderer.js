@@ -24,6 +24,12 @@ var wastelandRenderer = {
         if (this.speedRatio > 1.0) this.speedRatio = 1.0;
     },
 
+    enemySpeedRatio: 0.35, // Default 35%
+    setEnemySpeedRatio: function (val) {
+        // Linear 1-100%
+        this.enemySpeedRatio = val / 100.0;
+    },
+
     init: function (canvasId, dotNetRef) {
         this.dotNetRef = dotNetRef;
         this.canvas = document.getElementById(canvasId);
@@ -1295,15 +1301,18 @@ var wastelandRenderer = {
             console.log("Forced Spawn at: " + spawnPos);
         }
 
-        if (!this.enemies) return;
+        // Bandit Camp Proximity Check (Throttled)
+        if (!this.spawnTimer) this.spawnTimer = 0;
+        this.spawnTimer -= dt;
 
-        // Bandit Camp Proximity Check
-        if (this.banditCamps) {
+        if (this.spawnTimer <= 0 && this.banditCamps) {
+            this.spawnTimer = 3.0; // Check every 3 seconds
+
             for (var camp of this.banditCamps) {
                 if (camp.hasSpawned) continue;
                 var dist = BABYLON.Vector3.Distance(this.vehicle.position, camp.position);
-                console.log("Dist to Camp: " + Math.round(dist) + " (Req: 300)");
-                if (dist < 300) { // Trigger Range
+                console.log("Dist to Camp: " + Math.round(dist) + " (Req: 200)");
+                if (dist < 200) { // Trigger Range Reduced to 200
                     camp.hasSpawned = true;
                     console.log("BANDIT AMBUSH!");
                     // Spawn 3
@@ -1316,6 +1325,8 @@ var wastelandRenderer = {
                 }
             }
         }
+
+        if (!this.enemies) return;
 
         // AI Logic
         for (var i = this.enemies.length - 1; i >= 0; i--) {
@@ -1352,7 +1363,7 @@ var wastelandRenderer = {
             }
 
             var forward = new BABYLON.Vector3(Math.sin(e.data.facingAngle), 0, Math.cos(e.data.facingAngle));
-            var speed = 20 * dt; // Slowed down from 40
+            var speed = 100 * this.enemySpeedRatio; // Base 100 * Ratio (No DT here)
 
             // Move
             e.position.x += forward.x * speed * dt;

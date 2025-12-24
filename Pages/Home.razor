@@ -44,6 +44,11 @@
             <!-- Range 1 to 100. Default 50. -->
             <input type="range" min="1" max="100" value="50" class="slider" id="speedSlider" 
                    oninput="window.wastelandRenderer.setSpeedRatio(this.value)">
+
+            <span class="slider-label" style="margin-top: 10px;">BANDIT SPEED</span>
+            <!-- Default 35% to match current 35 units of 100 -->
+            <input type="range" min="1" max="100" value="35" class="slider" id="enemySpeedSlider" 
+                   oninput="window.wastelandRenderer.setEnemySpeedRatio(this.value)">
         </div>
 
         <div class="fuel-bar-container">
