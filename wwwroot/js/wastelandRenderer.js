@@ -65,6 +65,10 @@ var wastelandRenderer = {
         this.createScrapFields(scene, 20); // 20 Scrap piles
         this.createGasStations(scene, 10); // 10 Refuel Points
         this.createAbandonedCars(scene, 15); // 15 Rusted Hulks
+        this.createSnakes(scene, 10);
+        this.createCoyotes(scene, 5);
+        this.createSurvivorCamps(scene, 3);
+        this.createBanditCamps(scene, 3);
 
         // Vehicle
         this.createBuggy(scene);
@@ -466,34 +470,35 @@ var wastelandRenderer = {
             }
         }
 
-        // 9. POI Logic (Find Nearest)
         if (this.ruins && this.ruins.length > 0) {
+            // ... (Compass logic logic essentially rendered redundant by radar, but fine to keep HUD text)
+        }
+
+        // 13. Update Radar
+        if (!this.radarUI) {
+            // [FIX] First Frame Init
+            this.initRadar(this.scene);
+
+            // Add Blips
+            if (this.ruins) this.ruins.forEach(r => this.createBlip(r, "Purple", "ruin"));
+            if (this.survivorCamps) this.survivorCamps.forEach(c => this.createBlip(c, "Green", "camp"));
+            if (this.banditCamps) this.banditCamps.forEach(c => this.createBlip(c, "Red", "camp"));
+            if (this.gasStations) this.gasStations.forEach(g => this.createBlip(g, "Cyan", "resource"));
+            if (this.scrapFields) this.scrapFields.forEach(s => this.createBlip(s, "Yellow", "resource"));
+        }
+        this.updateRadar();
+
+        // 14. HUD Update (Always run if defined)
+        if (window.updateHud) {
+            // Find nearest ruin for distance signal
             var minDist = 99999;
-            for (var r of this.ruins) {
-                var d = BABYLON.Vector3.Distance(this.vehicle.position, r.position);
-                if (d < minDist) minDist = d;
+            if (this.ruins) {
+                for (var r of this.ruins) {
+                    var d = BABYLON.Vector3.Distance(this.vehicle.position, r.position);
+                    if (d < minDist) minDist = d;
+                }
             }
-            // Calculate Compass
-            var deg = (this.facingAngle * 180 / Math.PI) % 360;
-            if (deg < 0) deg += 360;
-            deg = Math.round(deg);
-
-            var card = "N";
-            if (deg >= 22.5 && deg < 67.5) card = "NE";
-            if (deg >= 67.5 && deg < 112.5) card = "E";
-            if (deg >= 112.5 && deg < 157.5) card = "SE";
-            if (deg >= 157.5 && deg < 202.5) card = "S";
-            if (deg >= 202.5 && deg < 247.5) card = "SW";
-            if (deg >= 247.5 && deg < 292.5) card = "W";
-            if (deg >= 292.5 && deg < 337.5) card = "NW";
-
-            // Update HUD
-            if (window.updateHud) {
-                // Signature: speed, dist, hdgRad, fuel, scrap
-                window.updateHud(Math.round(this.speed), Math.round(minDist), this.facingAngle, this.fuel, this.scrap);
-            }
-        } else {
-            if (window.updateHud) window.updateHud(Math.round(this.speed), 0, this.facingAngle, this.fuel, this.scrap);
+            window.updateHud(Math.round(this.speed), Math.round(minDist), this.facingAngle, this.fuel, this.scrap);
         }
 
         this.frame = (this.frame || 0) + 1;
@@ -719,6 +724,419 @@ var wastelandRenderer = {
             hulk.material = rustMat;
 
             this.abandonedCars.push(hulk);
+        }
+    },
+
+    createSnakes: function (scene, count) {
+        this.snakes = [];
+        var snakeMat = new BABYLON.StandardMaterial("snakeMat", scene);
+        snakeMat.diffuseColor = new BABYLON.Color3(0.6, 0.5, 0.3); // Desert Camo
+        snakeMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+
+        for (var i = 0; i < count; i++) {
+            var segments = [];
+
+            // Force first 2 near player
+            var range = (i < 2) ? 40 : 1000;
+            var headX = (Math.random() * range) - (range / 2);
+            var headZ = (Math.random() * range) - (range / 2); // 0,0 is start
+
+            // Create segments (Head -> Tail)
+            for (var j = 0; j < 8; j++) {
+                var s = BABYLON.MeshBuilder.CreateSphere("s" + i + "_" + j, { diameter: 1.0 - (j * 0.08) }, scene);
+                s.material = snakeMat;
+                s.position = new BABYLON.Vector3(headX, 0, headZ + (j * 0.5));
+                segments.push(s);
+            }
+
+            this.snakes.push({
+                segments: segments,
+                dir: new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
+                speed: 1.0 + Math.random(),
+                turnTimer: 0
+            });
+        }
+    },
+
+    createCoyotes: function (scene, count) {
+        console.log("Creating Coyotes...");
+        this.coyotes = [];
+        var furMat = new BABYLON.StandardMaterial("furMat", scene);
+        furMat.diffuseColor = new BABYLON.Color3(0.5, 0.4, 0.3); // Tan/Grey
+
+        for (var i = 0; i < count; i++) {
+            // Force first 2 near player
+            var range = (i < 2) ? 50 : 1000;
+            var x = (Math.random() * range) - (range / 2);
+            var z = (Math.random() * range) - (range / 2);
+
+            // Root Node
+            var root = new BABYLON.TransformNode("coyote" + i, scene);
+            root.position = new BABYLON.Vector3(x, 0, z);
+
+            // Body
+            var body = BABYLON.MeshBuilder.CreateBox("body", { width: 0.5, height: 0.6, depth: 1.2 }, scene);
+            body.parent = root;
+            body.position.y = 0.6; // Legs are ~0.6 tall
+            body.material = furMat;
+
+            // Head
+            var head = BABYLON.MeshBuilder.CreateBox("head", { width: 0.4, height: 0.4, depth: 0.5 }, scene);
+            head.parent = body;
+            head.position = new BABYLON.Vector3(0, 0.4, 0.6); // Up and Forward
+            head.material = furMat;
+
+            // Snout
+            var snout = BABYLON.MeshBuilder.CreateBox("snout", { width: 0.2, height: 0.2, depth: 0.3 }, scene);
+            snout.parent = head;
+            snout.position.z = 0.3;
+            snout.material = furMat;
+
+            // Ears
+            var earL = BABYLON.MeshBuilder.CreatePolyhedron("earL", { type: 1, size: 0.1 }, scene);
+            earL.parent = head; earL.position = new BABYLON.Vector3(-0.15, 0.25, -0.1); earL.material = furMat;
+            var earR = earL.clone(); earR.parent = head; earR.position.x = 0.15;
+
+            // Tail
+            var tail = BABYLON.MeshBuilder.CreateCylinder("tail", { diameterTop: 0.1, diameterBottom: 0.2, height: 0.8 }, scene);
+            tail.parent = body;
+            tail.rotation.x = Math.PI / 4; // Stick out/down
+            tail.position = new BABYLON.Vector3(0, 0.1, -0.6);
+            tail.material = furMat;
+
+            // Legs
+            var createLeg = (name, dx, dz) => {
+                var leg = BABYLON.MeshBuilder.CreateBox(name, { width: 0.15, height: 0.6, depth: 0.15 }, scene);
+                leg.parent = body;
+                leg.position = new BABYLON.Vector3(dx, -0.3, dz);
+                leg.material = furMat;
+                // Pivot at top for animation
+                leg.setPivotPoint(new BABYLON.Vector3(0, 0.3, 0));
+                return leg;
+            };
+
+            var fl = createLeg("LegFL", -0.2, 0.5);
+            var fr = createLeg("LegFR", 0.2, 0.5);
+            var bl = createLeg("LegBL", -0.2, -0.5);
+            var br = createLeg("LegBR", 0.2, -0.5);
+
+            this.coyotes.push({
+                root: root,
+                legs: [fl, fr, bl, br],
+                dir: new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
+                speed: 2.0,
+                animTime: Math.random() * 100,
+                stateTimer: 0
+            });
+        }
+    },
+
+    updateFauna: function (dt) {
+        // Update Snakes
+        if (this.snakes) {
+            for (var s of this.snakes) {
+                // Move Head
+                s.turnTimer -= dt;
+                if (s.turnTimer <= 0) {
+                    // New Random Direction
+                    s.dir = new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+                    s.turnTimer = 2.0 + Math.random() * 3.0;
+                }
+
+                var head = s.segments[0];
+                var move = s.dir.scale(s.speed * dt);
+
+                // Proposed Pos
+                var nextX = head.position.x + move.x;
+                var nextZ = head.position.z + move.z;
+                var nextY = this.getHeightAt(nextX, nextZ);
+
+                head.position = new BABYLON.Vector3(nextX, nextY + 0.4, nextZ);
+
+                // Body Follow (Slither)
+                for (var i = 1; i < s.segments.length; i++) {
+                    var curr = s.segments[i];
+                    var prev = s.segments[i - 1];
+
+                    // Simple "Spring" / Distance constraint
+                    var dist = 0.6; // Desired spacing
+                    var diff = prev.position.subtract(curr.position);
+                    var len = diff.length();
+
+                    if (len > dist) {
+                        var lerpFactor = 5.0 * dt;
+                        // Move towards prev, but maintain distance? 
+                        // Simplified: Just lerp towards intended spot
+                        var target = prev.position.subtract(diff.normalize().scale(dist));
+                        // Snap or Lerp? Lerp gives smoothness
+                        curr.position = BABYLON.Vector3.Lerp(curr.position, target, 10 * dt);
+
+                        // Stick to ground
+                        curr.position.y = this.getHeightAt(curr.position.x, curr.position.z) + 0.4;
+                    }
+                }
+            }
+        }
+
+        // Update Coyotes
+        if (this.coyotes) {
+            for (var c of this.coyotes) {
+                c.animTime += dt * c.speed * 5.0; // Walk cycle speed
+
+                // Move
+                c.stateTimer -= dt;
+                if (c.stateTimer <= 0) {
+                    c.dir = new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+                    c.stateTimer = 4.0 + Math.random() * 4.0;
+                }
+
+                var nextX = c.root.position.x + c.dir.x * c.speed * dt;
+                var nextZ = c.root.position.z + c.dir.z * c.speed * dt;
+                var nextY = this.getHeightAt(nextX, nextZ);
+
+                // Raise root slightly to prevent clipping
+                c.root.position = new BABYLON.Vector3(nextX, nextY + 0.5, nextZ);
+
+                // Rotation (Face direction)
+                var angle = Math.atan2(c.dir.x, c.dir.z);
+                c.root.rotation.y = angle;
+
+                // Leg Animation (Walk Cycle)
+                // Left Front & Right Back match. Right Front & Left Back match.
+                var legAmp = 0.4;
+                c.legs[0].rotation.x = Math.sin(c.animTime) * legAmp; // FL
+                c.legs[3].rotation.x = Math.sin(c.animTime) * legAmp; // BR
+
+                c.legs[1].rotation.x = Math.cos(c.animTime) * legAmp; // FR
+                c.legs[2].rotation.x = Math.cos(c.animTime) * legAmp; // BL
+            }
+        }
+    },
+
+    createSurvivorCamps: function (scene, count) {
+        this.survivorCamps = [];
+        var tentMat = new BABYLON.StandardMaterial("tentMat", scene);
+        tentMat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.85); // White Canvas
+
+        var waterMat = new BABYLON.StandardMaterial("waterMat", scene);
+        waterMat.diffuseColor = new BABYLON.Color3(0.2, 0.5, 0.8);
+
+        for (var i = 0; i < count; i++) {
+            var x = (Math.random() * 1200) - 600;
+            var z = (Math.random() * 1200) - 600;
+            var y = this.getHeightAt(x, z);
+
+            var campRoot = new BABYLON.TransformNode("camp" + i, scene);
+            campRoot.position = new BABYLON.Vector3(x, y, z);
+
+            // Tents
+            // 1. Dome Tents (Hemispheres)
+            var createDome = (tx, tz, size) => {
+                var dome = BABYLON.MeshBuilder.CreateSphere("dome", { diameter: size, slice: 0.5 }, scene);
+                dome.parent = campRoot;
+                dome.position = new BABYLON.Vector3(tx, 0, tz);
+                dome.scaling.y = 0.8;
+                dome.material = tentMat;
+            };
+
+            createDome(3, 3, 5);
+            createDome(-4, 2, 4);
+            createDome(0, -5, 6);
+
+            // 2. Water Tank
+            var tank = BABYLON.MeshBuilder.CreateCylinder("tank", { diameter: 2.5, height: 3 }, scene);
+            tank.parent = campRoot;
+            tank.position = new BABYLON.Vector3(-5, 1.5, -2);
+            tank.material = waterMat;
+
+            // 3. Crates
+            var crate = BABYLON.MeshBuilder.CreateBox("crate", { size: 1 }, scene);
+            crate.parent = campRoot; crate.position = new BABYLON.Vector3(2, 0.5, 1);
+            var c2 = crate.clone(); c2.parent = campRoot; c2.position = new BABYLON.Vector3(2.2, 0.5, 2.1); c2.rotation.y = 0.5;
+
+            // Fire
+            var fire = BABYLON.MeshBuilder.CreateBox("fire", { size: 0.5 }, scene);
+            fire.parent = campRoot;
+            fire.position.y = 0.25;
+            var fireMat = new BABYLON.StandardMaterial("fireMat", scene);
+            fireMat.emissiveColor = new BABYLON.Color3(1, 0.5, 0);
+            fire.material = fireMat;
+
+            // Light
+            var light = new BABYLON.PointLight("campLight" + i, new BABYLON.Vector3(0, 2, 0), scene);
+            light.parent = campRoot;
+            light.diffuse = new BABYLON.Color3(1, 0.6, 0.3);
+            light.range = 30;
+
+            this.survivorCamps.push(campRoot);
+        }
+    },
+
+    createBanditCamps: function (scene, count) {
+        this.banditCamps = [];
+        var spikeMat = new BABYLON.StandardMaterial("spikeMat", scene);
+        spikeMat.diffuseColor = new BABYLON.Color3(0.3, 0.1, 0.1); // Rusty Red
+
+        var metalMat = new BABYLON.StandardMaterial("metalMat", scene);
+        metalMat.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+
+        for (var i = 0; i < count; i++) {
+            var x = (Math.random() * 1200) - 600;
+            var z = (Math.random() * 1200) - 600;
+            var y = this.getHeightAt(x, z);
+
+            var campRoot = new BABYLON.TransformNode("bandit" + i, scene);
+            campRoot.position = new BABYLON.Vector3(x, y, z);
+
+            // Spikes (Fence)
+            // 1. Spikes (Disordered Ring)
+            for (var j = 0; j < 12; j++) {
+                var angle = (j / 12) * Math.PI * 2;
+                var dist = 8 + (Math.random() * 3); // uneven
+                var sx = Math.sin(angle) * 8;
+                var sz = Math.cos(angle) * 8;
+
+                var h = 3 + Math.random() * 3;
+                var spike = BABYLON.MeshBuilder.CreateCylinder("spike", { diameterTop: 0, diameterBottom: 0.6, height: h }, scene);
+                spike.parent = campRoot;
+                spike.position = new BABYLON.Vector3(sx, h / 2, sz);
+                spike.rotation.x = (Math.random() - 0.5) * 0.5; // Tilted
+                spike.rotation.z = (Math.random() - 0.5) * 0.5;
+                spike.material = spikeMat;
+            }
+
+            // 2. Watchtower
+            var towerHeight = 12;
+            var tower = BABYLON.MeshBuilder.CreateCylinder("towerBase", { diameter: 3, height: towerHeight, tessellation: 6 }, scene);
+            tower.parent = campRoot;
+            tower.position = new BABYLON.Vector3(-5, towerHeight / 2, 5);
+            tower.material = metalMat;
+
+            var platform = BABYLON.MeshBuilder.CreateCylinder("platform", { diameter: 5, height: 1 }, scene);
+            platform.parent = campRoot;
+            platform.position = new BABYLON.Vector3(-5, towerHeight, 5);
+            platform.material = metalMat;
+
+            // 3. Skull Pole (Iconic)
+            var pole = BABYLON.MeshBuilder.CreateCylinder("pole", { diameter: 0.2, height: 6 }, scene);
+            pole.parent = campRoot;
+            pole.position = new BABYLON.Vector3(4, 3, 4);
+            pole.material = metalMat;
+
+            var skull = BABYLON.MeshBuilder.CreateSphere("skull", { diameter: 1.0 }, scene);
+            skull.parent = campRoot;
+            skull.position = new BABYLON.Vector3(4, 5.8, 4);
+            skull.material = new BABYLON.StandardMaterial("skullCol", scene); // White
+
+            this.banditCamps.push(campRoot);
+        }
+    },
+
+    initRadar: function (scene) {
+        // GUI
+        var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this.radarUI = advancedTexture;
+
+        // Container (Bottom Left)
+        var radarContainer = new BABYLON.GUI.Ellipse();
+        radarContainer.width = "200px";
+        radarContainer.height = "200px";
+        radarContainer.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        radarContainer.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+        radarContainer.left = "20px";
+        radarContainer.top = "-20px";
+        radarContainer.color = "Green";
+        radarContainer.thickness = 4;
+        radarContainer.background = "Black";
+        radarContainer.alpha = 0.8;
+        advancedTexture.addControl(radarContainer);
+
+        // Center Player Marker (Blue Circle + White Arrow)
+        var carIcon = new BABYLON.GUI.Ellipse();
+        carIcon.width = "20px";
+        carIcon.height = "20px";
+        carIcon.color = "White"; // Border
+        carIcon.thickness = 1;
+        carIcon.background = "Blue";
+
+        // Arrow
+        var arrow = new BABYLON.GUI.TextBlock();
+        arrow.text = "↑"; // Points UP
+        arrow.color = "White";
+        arrow.fontSize = "16px";
+        arrow.fontWeight = "bold";
+        carIcon.addControl(arrow);
+
+        radarContainer.addControl(carIcon);
+        this.radarCar = carIcon; // Store for rotation
+
+        this.radarBlips = [];
+        this.radarContainer = radarContainer;
+        this.radarRange = 300; // Meters visible on radar
+    },
+
+    createBlip: function (targetMesh, color, type) {
+        var blip = new BABYLON.GUI.Ellipse();
+        blip.width = "6px";
+        blip.height = "6px";
+        blip.color = color;
+        blip.background = color;
+
+        if (type === "ruin") {
+            blip.width = "10px";
+            blip.height = "10px";
+            blip.color = "Purple"; // Border
+            blip.background = "Purple";
+        }
+
+        this.radarContainer.addControl(blip);
+
+        this.radarBlips.push({
+            ui: blip,
+            mesh: targetMesh
+        });
+    },
+
+    updateRadar: function () {
+        if (!this.radarContainer || !this.vehicle) return;
+
+        var pPos = this.vehicle.position;
+
+        // North-Up Radar: Map is fixed. Car rotates.
+        if (this.radarCar) {
+            this.radarCar.rotation = this.facingAngle; // Positive rotation
+        }
+
+        var radius = 100; // UI pixels radius
+
+        for (var b of this.radarBlips) {
+            if (!b.mesh || !b.mesh.isEnabled()) {
+                b.ui.isVisible = false;
+                continue;
+            }
+
+            var tPos = b.mesh.position;
+            var dx = tPos.x - pPos.x;
+            var dz = tPos.z - pPos.z;
+
+            // Dist check first
+            var dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist > this.radarRange) {
+                b.ui.isVisible = false;
+                continue;
+            }
+
+            b.ui.isVisible = true;
+
+            // North-Up Logic: No Grid Rotation
+            // World +X (East) -> Radar +X (Right)
+            // World +Z (North) -> Radar -Y (Up)
+            var scale = radius / this.radarRange;
+            var uiX = dx * scale;
+            var uiY = -dz * scale;
+
+            b.ui.left = uiX + "px";
+            b.ui.top = uiY + "px";
         }
     }
 };
