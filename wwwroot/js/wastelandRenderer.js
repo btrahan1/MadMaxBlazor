@@ -1110,6 +1110,14 @@ var wastelandRenderer = {
             skull.material = new BABYLON.StandardMaterial("skullCol", scene); // White
 
             this.banditCamps.push(campRoot);
+
+            // Bandits (NPCs)
+            for (var n = 0; n < 3; n++) {
+                // Random offset
+                var nx = x + (Math.random() * 10) - 5;
+                var nz = z + (Math.random() * 10) - 5;
+                this.createSurvivor(scene, nx, nz, true); // isBandit = true
+            }
         }
     },
 
@@ -1509,13 +1517,15 @@ var wastelandRenderer = {
         console.log("Enemy Destroyed!");
     },
     // --- SURVIVOR NPC SYSTEM ---
-    createSurvivor: function (scene, x, z) {
+    // --- SURVIVOR NPC SYSTEM ---
+    createSurvivor: function (scene, x, z, isBandit) {
         if (!this.survivors) this.survivors = [];
 
         // Root
-        var npc = new BABYLON.TransformNode("npc", scene);
+        var name = isBandit ? "bandit" : "npc";
+        var npc = new BABYLON.TransformNode(name, scene);
         npc.position = new BABYLON.Vector3(x, 10, z); // Drop from sky high to test gravity
-        console.log("New Survivor Created at " + x + ", 10, " + z);
+        // console.log("New Survivor Created at " + x + ", 10, " + z);
 
         // Data
         npc.data = {
@@ -1532,7 +1542,11 @@ var wastelandRenderer = {
         skinMat.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.5);
 
         var clothMat = new BABYLON.StandardMaterial("cloth", scene);
-        clothMat.diffuseColor = new BABYLON.Color3(0.6, 0.5, 0.4); // Brown rags
+        if (isBandit) {
+            clothMat.diffuseColor = new BABYLON.Color3(0.6, 0.1, 0.1); // Red Bandits
+        } else {
+            clothMat.diffuseColor = new BABYLON.Color3(0.6, 0.5, 0.4); // Brown Rags
+        }
 
         // 1. Torso
         var torso = BABYLON.MeshBuilder.CreateBox("torso", { width: 0.5, height: 0.7, depth: 0.3 }, scene);
