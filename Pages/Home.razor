@@ -1,0 +1,286 @@
+﻿@page "/"
+@inject IJSRuntime JSRuntime
+
+<PageTitle>The Wasteland</PageTitle>
+
+<div class="game-container">
+    <canvas id="renderCanvas"></canvas>
+    
+    @if (ShowSplash)
+    {
+        <div class="splash-overlay">
+            <h1 class="splash-title">MAD MAX BLAZOR</h1>
+            <h2 class="splash-subtitle">THE WASTELANDS</h2>
+            
+            <div class="splash-menu">
+                <button class="menu-btn primary" @onclick="StartSinglePlayer">SINGLE PLAYER</button>
+                <button class="menu-btn secondary" @onclick="StartMultiplayer">MULTIPLAYER</button>
+            </div>
+            
+            <div class="splash-footer">
+                <p>Use WASD to Drive | Shift for Turbo | E to Loot</p>
+            </div>
+        </div>
+    }
+    
+    <div class="hud" style="@(ShowSplash ? "display:none;" : "")">
+        <h1>THE WASTE</h1>
+        <div class="compass-wrapper">
+            <div class="compass-strip" id="compassStrip"></div>
+            <div class="compass-marker">▼</div>
+        </div>
+        <p>SPEED: <span id="speedVal">0</span> km/h</p>
+        <p>HDG: <span id="hdgVal">0° (N)</span></p>
+        <p style="color: red; font-weight: bold;">SIGNAL: <span id="distVal">SEARCHING</span></p>
+    </div>
+    
+    <div class="hud-right">
+        <p>SCRAP: <span id="scrapVal" style="color: gold;">0</span></p>
+    </div>
+
+    <div class="hud-bottom">
+        <div class="fuel-bar-container">
+            <div class="fuel-bar" id="fuelBar" style="width: 100%;"></div>
+            <span class="fuel-label">FUEL</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.updateHud = (speed, dist, hdgRad, fuel, scrap) => {
+        document.getElementById('speedVal').innerText = speed;
+        document.getElementById('distVal').innerText = dist + "m";
+        
+        // Scrap
+        if (scrap !== undefined) {
+             document.getElementById('scrapVal').innerText = scrap;
+        }
+
+        // Fuel
+        if (fuel !== undefined) {
+             document.getElementById('fuelBar').style.width = fuel + "%";
+             if (fuel < 20) document.getElementById('fuelBar').style.backgroundColor = "red";
+             else document.getElementById('fuelBar').style.backgroundColor = "#ffcc00";
+        }
+
+        // Visual Compass Update (2px per degree)
+        // Deg = rad * 180 / PI
+        // Offset = -Deg * 2
+        var deg = hdgRad * (180 / Math.PI);
+        var offset = -deg * 2;
+        // Center text is at 0, which is "N". Center of div is at 200px.
+        // If we want "N" (0 deg) to be at center, offset should be 0 assuming back-pos-x works that way?
+        // Actually, usually background-position 0 starts at left edge.
+        // To center 0 deg (N) at 200px (center of 400px div):
+        // Offset = 200 - (deg * 2).
+        var finalPos = 200 + offset;
+        document.getElementById('compassStrip').style.backgroundPositionX = finalPos + "px";
+    };
+</script>
+
+<style>
+    body, html { overflow: hidden; height: 100%; margin: 0; background: #222; }
+    .game-container { position: relative; width: 100%; height: 100vh; }
+    #renderCanvas { width: 100%; height: 100%; touch-action: none; outline: none; }
+    
+    .hud {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        color: orange;
+        font-family: 'Courier New', monospace;
+        text-shadow: 2px 2px 0 #000;
+        pointer-events: none;
+        width: 100%; /* Full width for centering stuff if needed */
+    }
+
+    .compass-wrapper {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 400px;
+        height: 40px;
+        background: rgba(0,0,0,0.6);
+        border: 2px solid #555;
+        border-radius: 4px;
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    .compass-strip {
+        width: 100%;
+        height: 100%;
+        /* 720px wide image: 0=N, 180=E, 360=S, 540=W. 2px per degree */
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='720' height='40' viewBox='0 0 720 40'><text x='0' y='30' fill='white' font-family='monospace' font-weight='bold' text-anchor='middle'>N</text><rect x='90' y='10' width='2' height='10' fill='gray'/><text x='180' y='30' fill='white' font-family='monospace' font-weight='bold' text-anchor='middle'>E</text><rect x='270' y='10' width='2' height='10' fill='gray'/><text x='360' y='30' fill='white' font-family='monospace' font-weight='bold' text-anchor='middle'>S</text><rect x='450' y='10' width='2' height='10' fill='gray'/><text x='540' y='30' fill='white' font-family='monospace' font-weight='bold' text-anchor='middle'>W</text><rect x='630' y='10' width='2' height='10' fill='gray'/><text x='720' y='30' fill='white' font-family='monospace' font-weight='bold' text-anchor='middle'>N</text></svg>");
+        background-repeat: repeat-x;
+    }
+
+    .compass-marker {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        color: red;
+        font-size: 20px;
+        line-height: 20px;
+    }
+
+    .hud-right {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        color: white;
+        font-family: 'Courier New', monospace;
+        text-shadow: 2px 2px 0 #000;
+        font-size: 24px;
+        font-weight: bold;
+        pointer-events: none;
+    }
+
+    .hud-bottom {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 300px;
+        pointer-events: none;
+    }
+
+    .fuel-bar-container {
+        width: 100%;
+        height: 30px;
+        background: #333;
+        border: 2px solid #555;
+        position: relative;
+    }
+
+    .fuel-bar {
+        height: 100%;
+        background: #ffcc00; /* Fuel Color */
+        transition: width 0.2s;
+    }
+
+    .fuel-label {
+        position: absolute;
+        width: 100%;
+        text-align: center;
+        top: 2px;
+        color: black;
+        font-weight: bold;
+        font-family: sans-serif;
+    }
+
+    /* Splash Screen Styles */
+    .splash-overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+        backdrop-filter: blur(5px);
+    }
+
+    .splash-title {
+        font-family: 'Impact', sans-serif;
+        font-size: 80px;
+        color: #ffcc00;
+        text-shadow: 4px 4px 0 #000;
+        margin-bottom: 0;
+        letter-spacing: 5px;
+    }
+
+    .splash-subtitle {
+        font-family: 'Courier New', monospace;
+        font-size: 30px;
+        color: #fff;
+        margin-top: 10px;
+        margin-bottom: 50px;
+        letter-spacing: 10px;
+        text-transform: uppercase;
+        border-bottom: 2px solid #ffcc00;
+        padding-bottom: 10px;
+    }
+
+    .menu-btn {
+        display: block;
+        width: 300px;
+        padding: 15px;
+        margin: 15px;
+        font-family: 'Courier New', monospace;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        border: 2px solid #ffcc00;
+        background: rgba(0,0,0,0.8);
+        color: #ffcc00;
+        text-transform: uppercase;
+        transition: all 0.2s;
+    }
+
+    .menu-btn:hover {
+        background: #ffcc00;
+        color: #000;
+        transform: scale(1.05);
+    }
+
+    .menu-btn.secondary {
+        border-color: #555;
+        color: #aaa;
+    }
+    
+    .menu-btn.secondary:hover {
+        background: #555;
+        color: #fff;
+    }
+
+    .splash-footer {
+        position: absolute;
+        bottom: 30px;
+        color: #888;
+        font-family: sans-serif;
+    }
+</style>
+
+@code {
+    private DotNetObjectReference<Home>? objRef;
+    private bool ShowSplash { get; set; } = true;
+    
+    [Inject] MadMaxBlazor.Services.GameState State { get; set; } = default!;
+
+    private void StartSinglePlayer()
+    {
+        ShowSplash = false;
+        // Optionally invoke JS to focus canvas
+    }
+
+    private void StartMultiplayer()
+    {
+        // No Op
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            objRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("wastelandRenderer.init", "renderCanvas", objRef);
+        }
+    }
+
+    [JSInvokable]
+    public void AddScrap(int amount)
+    {
+        State.AddScrap(amount);
+        // Direct UI update via JS for speed, or let Blazor re-render? 
+        // For 60fps game loops, JS updating DOM is smoother.
+        // We will push State back to JS if needed, but for now JS drives the UI.
+    }
+
+    public void Dispose()
+    {
+        objRef?.Dispose();
+    }
+}
