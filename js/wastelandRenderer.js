@@ -24,6 +24,12 @@ var wastelandRenderer = {
         if (this.speedRatio > 1.0) this.speedRatio = 1.0;
     },
 
+    enemySpeedRatio: 0.35, // Default 35%
+    setEnemySpeedRatio: function (val) {
+        // Linear 1-100%
+        this.enemySpeedRatio = val / 100.0;
+    },
+
     init: function (canvasId, dotNetRef) {
         this.dotNetRef = dotNetRef;
         this.canvas = document.getElementById(canvasId);
@@ -1295,14 +1301,18 @@ var wastelandRenderer = {
             console.log("Forced Spawn at: " + spawnPos);
         }
 
-        if (!this.enemies) return;
+        // Bandit Camp Proximity Check (Throttled)
+        if (!this.spawnTimer) this.spawnTimer = 0;
+        this.spawnTimer -= dt;
 
-        // Bandit Camp Proximity Check
-        if (this.banditCamps) {
+        if (this.spawnTimer <= 0 && this.banditCamps) {
+            this.spawnTimer = 3.0; // Check every 3 seconds
+
             for (var camp of this.banditCamps) {
                 if (camp.hasSpawned) continue;
                 var dist = BABYLON.Vector3.Distance(this.vehicle.position, camp.position);
-                if (dist < 300) { // Trigger Range Increased to 300
+                console.log("Dist to Camp: " + Math.round(dist) + " (Req: 200)");
+                if (dist < 200) { // Trigger Range Reduced to 200
                     camp.hasSpawned = true;
                     console.log("BANDIT AMBUSH!");
                     // Spawn 3
@@ -1315,6 +1325,8 @@ var wastelandRenderer = {
                 }
             }
         }
+
+        if (!this.enemies) return;
 
         // AI Logic
         for (var i = this.enemies.length - 1; i >= 0; i--) {
@@ -1351,7 +1363,7 @@ var wastelandRenderer = {
             }
 
             var forward = new BABYLON.Vector3(Math.sin(e.data.facingAngle), 0, Math.cos(e.data.facingAngle));
-            var speed = 40; // Constant drive
+            var speed = 100 * this.enemySpeedRatio; // Base 100 * Ratio (No DT here)
 
             // Move
             e.position.x += forward.x * speed * dt;
@@ -1359,6 +1371,24 @@ var wastelandRenderer = {
 
             // Update Mesh Rotation
             e.rotation.y = e.data.facingAngle;
+
+            // Player Ramming Logic
+            if (BABYLON.Vector3.Distance(this.vehicle.position, e.position) < 3.0) {
+                // Ram!
+                // Push player?
+                // Damage Player
+                // Only hit once per sec?
+                var now = Date.now();
+                if (!this.lastRamTime || now - this.lastRamTime > 1000) {
+                    this.fuel -= 10; // Lose fuel/health
+                    console.log("OUCH! Rammed by Bandit! Fuel: " + this.fuel);
+                    this.lastRamTime = now;
+
+                    // Helper: Knockback
+                    var pushDir = this.vehicle.position.subtract(e.position).normalize();
+                    this.velocity.addInPlace(pushDir.scale(10)); // Big bump
+                }
+            }
         }
     },
 
@@ -1381,14 +1411,78 @@ var wastelandRenderer = {
             p.mesh.position.x += p.direction.x * p.speed * dt;
             p.mesh.position.z += p.direction.z * p.speed * dt;
 
-            // Ground Collision (Simple: If below ground, puff and die)
+            // Ground Collision
             var gy = this.getHeightAt(p.mesh.position.x, p.mesh.position.z);
             if (p.mesh.position.y < gy) {
-                // Hit Ground
                 p.mesh.dispose();
                 this.projectiles.splice(i, 1);
-                // TODO: Spawn Particle Puff?
+                continue;
+            }
+
+            // Enemy Collision (Simple Distance)
+            if (this.enemies) {
+                var hit = false;
+                for (var j = this.enemies.length - 1; j >= 0; j--) {
+                    var e = this.enemies[j];
+                    if (BABYLON.Vector3.Distance(p.mesh.position, e.position) < 5.0) { // Hitbox increased to 5.0
+                        // HIT!
+                        p.mesh.dispose();
+                        this.projectiles.splice(i, 1);
+                        hit = true;
+
+                        // Damage
+                        e.data.hp--;
+                        console.log("Hit Enemy! HP: " + e.data.hp);
+
+                        if (e.data.hp <= 0) {
+                            this.destroyEnemy(e, j);
+                        }
+                        break; // Bullet used up
+                    }
+                }
+                if (hit) continue;
             }
         }
+    },
+
+    destroyEnemy: function (enemy, index) {
+        // 1. Explosion
+        var explosion = new BABYLON.ParticleSystem("expl", 200, this.scene);
+        explosion.particleTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/flare.png", this.scene);
+        explosion.emitter = enemy.position.clone(); // Static pos
+        explosion.minEmitBox = new BABYLON.Vector3(-1, 0, -1);
+        explosion.maxEmitBox = new BABYLON.Vector3(1, 1, 1);
+        explosion.color1 = new BABYLON.Color4(1, 0.5, 0, 1); // Orange
+        explosion.color2 = new BABYLON.Color4(1, 0, 0, 1);   // Red
+        explosion.colorDead = new BABYLON.Color4(0, 0, 0, 0);
+        explosion.minSize = 1; explosion.maxSize = 3;
+        explosion.minLifeTime = 0.2; explosion.maxLifeTime = 0.8;
+        explosion.emitRate = 2000;
+        explosion.targetStopDuration = 0.1; // One shot
+        explosion.start();
+
+        // 2. Remove Mesh
+        enemy.dispose();
+
+        // 3. Remove Data
+        this.enemies.splice(index, 1);
+
+        // 4. Remove Blip (Need to find it)
+        // Inefficient search, but reliable
+        // We didn't store blip ref on enemy. 
+        // TODO: Store blip on enemy.data for fast removal?
+        // For now, rebuild radar check handles clean up automatically?
+        // updateRadar checks if (!b.mesh || !b.mesh.isEnabled()). 
+        // Since we disposed mesh, updateRadar will hide it.
+        // Ideally we should remove from array to stop leak.
+        for (var k = this.radarBlips.length - 1; k >= 0; k--) {
+            if (this.radarBlips[k].mesh === enemy) {
+                this.radarBlips[k].ui.dispose(); // Remove DOM
+                this.radarBlips.splice(k, 1);
+                break;
+            }
+        }
+
+        console.log("Enemy Destroyed!");
     }
 };
