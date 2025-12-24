@@ -549,6 +549,7 @@ var wastelandRenderer = {
 
         this.updateProjectiles(dt);
         this.updateEnemies(dt);
+        this.updateBosses(dt);
         this.updateSurvivors(dt);
         // this.updateFauna(dt); // Disabled: Too busy (User Request)
         // ---------------------
@@ -1516,6 +1517,165 @@ var wastelandRenderer = {
 
         console.log("Enemy Destroyed!");
     },
+
+    // --- BOSS SYSTEM (The War Rig) ---
+    createBossTanker: function (scene, x, z) {
+        if (!this.bosses) this.bosses = [];
+
+        // 1. Cab (The Brute)
+        var cab = new BABYLON.MeshBuilder.CreateBox("bossCab", { width: 3.5, height: 4, depth: 5 }, scene);
+        cab.position = new BABYLON.Vector3(x, 10, z); // High spawn
+        var cabMat = new BABYLON.StandardMaterial("cabMat", scene);
+        cabMat.diffuseColor = new BABYLON.Color3(0.4, 0.1, 0.1); // Dark Red
+        cab.material = cabMat;
+
+        // Smokestacks
+        var stack1 = BABYLON.MeshBuilder.CreateCylinder("stack1", { diameter: 0.5, height: 3 }, scene);
+        stack1.parent = cab; stack1.position = new BABYLON.Vector3(1.2, 2.5, -1);
+        var stack2 = stack1.clone(); stack2.parent = cab; stack2.position.x = -1.2;
+
+        // Cab Wheels (6)
+        var wheelMat = new BABYLON.StandardMaterial("bossWheel", scene);
+        wheelMat.diffuseColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+
+        var addWheel = (parent, x, z) => {
+            var w = BABYLON.MeshBuilder.CreateCylinder("bw", { diameter: 2.5, height: 1.2 }, scene);
+            w.rotation.z = Math.PI / 2;
+            w.parent = parent;
+            w.position = new BABYLON.Vector3(x, -1, z);
+            w.material = wheelMat;
+        };
+        addWheel(cab, 2, 1.5); addWheel(cab, -2, 1.5);
+        addWheel(cab, 2, -1.5); addWheel(cab, -2, -1.5); // Rear Duals
+        addWheel(cab, 2.8, -1.5); addWheel(cab, -2.8, -1.5); // Extra wide stance
+
+        // 2. Trailer (The Tanker)
+        var trailer = BABYLON.MeshBuilder.CreateCylinder("trailer", { diameter: 3.5, height: 12 }, scene);
+        trailer.rotation.x = Math.PI / 2; // Horizontal
+        trailer.material = new BABYLON.StandardMaterial("tankMat", scene);
+        trailer.material.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.75); // Chrome/Silver
+        trailer.material.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+
+        // Trailer Wheels (8)
+        var tChassis = new BABYLON.TransformNode("tChassis", scene);
+        tChassis.parent = trailer;
+        tChassis.rotation.x = -Math.PI / 2; // Counter rotate to be flat relative to world
+        addWheel(tChassis, 2, -4); addWheel(tChassis, -2, -4);
+        addWheel(tChassis, 2, -5.5); addWheel(tChassis, -2, -5.5);
+
+        // Initial Trailer Pos (Behind Cab)
+        trailer.position = new BABYLON.Vector3(x, 10, z - 8);
+
+        // Boss Object
+        var boss = {
+            cab: cab,
+            trailer: trailer,
+            dir: new BABYLON.Vector3(0, 0, 1),
+            speed: 5.0, // Slow but unstoppable
+            hp: 50, // Tank
+            turnTimer: 0,
+            targetIndex: 0 // Patrol Waypoint
+        };
+
+        this.bosses.push(boss);
+        this.createBlip(cab, "Orange", "enemy"); // Orange Blip for Boss
+        console.log("THE WAR RIG HAS ARRIVED.");
+    },
+
+    updateBosses: function (dt) {
+        // Debug Spawn 'Z'
+        if (this.inputMap["z"] || this.inputMap["Z"]) {
+            this.inputMap["z"] = false;
+            this.inputMap["Z"] = false;
+            var fwd = this.vehicle.forward || new BABYLON.Vector3(0, 0, 1);
+            var spawnPos = this.vehicle.position.add(fwd.scale(40)); // Spawn further out
+            this.createBossTanker(this.scene, spawnPos.x, spawnPos.z);
+        }
+
+        if (!this.bosses) return;
+
+        for (var b of this.bosses) {
+            if (!b.cab.isEnabled()) continue;
+
+            // 1. AI (Patrol Route: Ruin -> Ruin)
+            if (this.ruins && this.ruins.length > 0) {
+                var targetRuin = this.ruins[b.targetIndex];
+
+                // Calculate Direction to Target
+                var dx = targetRuin.position.x - b.cab.position.x;
+                var dz = targetRuin.position.z - b.cab.position.z;
+                var distToTarget = Math.sqrt(dx * dx + dz * dz);
+
+                // Normalize for Direction
+                if (distToTarget > 1.0) {
+                    b.dir = new BABYLON.Vector3(dx, 0, dz).normalize();
+                }
+
+                // Waypoint Reached?
+                if (distToTarget < 30.0) { // Large radius arrival
+                    b.targetIndex++;
+                    if (b.targetIndex >= this.ruins.length) b.targetIndex = 0; // Loop
+                    // console.log("War Rig reached Waypoint. Next: " + b.targetIndex);
+                }
+            } else {
+                // Fallback: Random Roam if no ruins found
+                b.turnTimer -= dt;
+                if (b.turnTimer <= 0) {
+                    b.dir = new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+                    b.turnTimer = 5.0 + Math.random() * 5.0;
+                }
+            }
+
+            // 2. Cab Movement (Physics)
+            var move = b.dir.scale(b.speed * dt);
+            var nextX = b.cab.position.x + move.x;
+            var nextZ = b.cab.position.z + move.z;
+            var groundH = this.getHeightFast(nextX, nextZ);
+
+            b.cab.position.x = nextX;
+            b.cab.position.z = nextZ;
+            b.cab.position.y = groundH + 2.0; // High clearance
+
+            // Rotation
+            var targetAngle = Math.atan2(b.dir.x, b.dir.z);
+            // Slew rotation for heavy feel
+            var currentRotation = b.cab.rotation.y;
+            // Shortest path angle interpolation
+            var diff = targetAngle - currentRotation;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+
+            b.cab.rotation.y += diff * 1.0 * dt; // Slow turn rate
+
+            // 3. Trailer Articulation (Follow the Fifth Wheel)
+            // The trailer wants to be X units behind the cab
+            var hitchOffset = new BABYLON.Vector3(Math.sin(b.cab.rotation.y), 0, Math.cos(b.cab.rotation.y)).scale(-5); // Hitch is back of cab
+            var hitchPos = b.cab.position.add(hitchOffset);
+
+            var currPos = b.trailer.position;
+            var diff = hitchPos.subtract(currPos);
+            var dist = diff.length();
+            var desiredDist = 0.5; // Close hitch
+
+            if (dist > desiredDist) {
+                // Drag the trailer
+                var dragDir = diff.normalize();
+                var newPos = hitchPos.subtract(dragDir.scale(desiredDist));
+
+                // Physics Y for Trailer
+                var tGround = this.getHeightFast(newPos.x, newPos.z);
+                newPos.y = tGround + 2.0;
+
+                b.trailer.position = BABYLON.Vector3.Lerp(b.trailer.position, newPos, 5.0 * dt);
+
+                // Trailer Rotation (Face the Cab)
+                var tAngle = Math.atan2(dragDir.x, dragDir.z);
+                b.trailer.rotation.y = tAngle; // Cylinder rotation
+                // Note: Cylinder default rot is weird (horizontal), so we rotate Y globally
+            }
+        }
+    },
+
     // --- SURVIVOR NPC SYSTEM ---
     // --- SURVIVOR NPC SYSTEM ---
     createSurvivor: function (scene, x, z, isBandit) {
