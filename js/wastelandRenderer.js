@@ -166,6 +166,11 @@ var wastelandRenderer = {
         return this.calculateHeight(x, z);
     },
 
+    // O(1) Math-based height for NPCs (No Raycast)
+    getHeightFast: function (x, z) {
+        return this.calculateHeight(x, z);
+    },
+
     createVegetation: function (scene, count) {
         var mat = new BABYLON.StandardMaterial("cactusMat", scene);
         mat.diffuseTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/grass.png", scene); // Green noise
@@ -544,6 +549,8 @@ var wastelandRenderer = {
 
         this.updateProjectiles(dt);
         this.updateEnemies(dt);
+        this.updateSurvivors(dt);
+        // this.updateFauna(dt); // Disabled: Too busy (User Request)
         // ---------------------
 
         // 14. HUD Update (Always run if defined)
@@ -890,47 +897,46 @@ var wastelandRenderer = {
     },
 
     updateFauna: function (dt) {
+        var gravity = 9.8;
+
         // Update Snakes
         if (this.snakes) {
             for (var s of this.snakes) {
                 // Move Head
                 s.turnTimer -= dt;
                 if (s.turnTimer <= 0) {
-                    // New Random Direction
                     s.dir = new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
                     s.turnTimer = 2.0 + Math.random() * 3.0;
                 }
 
                 var head = s.segments[0];
-                var move = s.dir.scale(s.speed * dt);
+                var speed = 3.0 * dt; // Faster snakes
+                var move = s.dir.scale(speed);
 
                 // Proposed Pos
                 var nextX = head.position.x + move.x;
                 var nextZ = head.position.z + move.z;
-                var nextY = this.getHeightAt(nextX, nextZ);
+                var groundH = this.getHeightAt(nextX, nextZ);
 
-                head.position = new BABYLON.Vector3(nextX, nextY + 0.4, nextZ);
+                // Physics Check
+                // Snakes slither on ground, no gravity needed really, just clamping
+                head.position.x = nextX;
+                head.position.z = nextZ;
+                head.position.y = groundH + 0.2; // Keep head up
 
                 // Body Follow (Slither)
                 for (var i = 1; i < s.segments.length; i++) {
                     var curr = s.segments[i];
                     var prev = s.segments[i - 1];
 
-                    // Simple "Spring" / Distance constraint
                     var dist = 0.6; // Desired spacing
                     var diff = prev.position.subtract(curr.position);
                     var len = diff.length();
 
                     if (len > dist) {
-                        var lerpFactor = 5.0 * dt;
-                        // Move towards prev, but maintain distance? 
-                        // Simplified: Just lerp towards intended spot
                         var target = prev.position.subtract(diff.normalize().scale(dist));
-                        // Snap or Lerp? Lerp gives smoothness
                         curr.position = BABYLON.Vector3.Lerp(curr.position, target, 10 * dt);
-
-                        // Stick to ground
-                        curr.position.y = this.getHeightAt(curr.position.x, curr.position.z) + 0.4;
+                        curr.position.y = this.getHeightAt(curr.position.x, curr.position.z) + 0.2;
                     }
                 }
             }
@@ -939,32 +945,38 @@ var wastelandRenderer = {
         // Update Coyotes
         if (this.coyotes) {
             for (var c of this.coyotes) {
-                c.animTime += dt * c.speed * 5.0; // Walk cycle speed
-
-                // Move
+                // Logic
                 c.stateTimer -= dt;
                 if (c.stateTimer <= 0) {
                     c.dir = new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
                     c.stateTimer = 4.0 + Math.random() * 4.0;
                 }
 
-                var nextX = c.root.position.x + c.dir.x * c.speed * dt;
-                var nextZ = c.root.position.z + c.dir.z * c.speed * dt;
-                var nextY = this.getHeightAt(nextX, nextZ);
+                // Move
+                var cSpeed = 4.0 * dt; // Fast coyotes
+                var nextX = c.root.position.x + c.dir.x * cSpeed;
+                var nextZ = c.root.position.z + c.dir.z * cSpeed;
 
-                // Raise root slightly to prevent clipping
-                c.root.position = new BABYLON.Vector3(nextX, nextY + 0.5, nextZ);
+                // Physics/Gravity
+                // If they were static, it's likely the old code was too rigid or sinking them
+                var gH = this.getHeightAt(nextX, nextZ);
+                var floor = gH + 0.5; // Pivot height
 
-                // Rotation (Face direction)
+                // Simple move + clamp (Coyotes don't need complex falling physics yet, just reliability)
+                c.root.position.x = nextX;
+                c.root.position.z = nextZ;
+                c.root.position.y = floor;
+
+                // Rotation
                 var angle = Math.atan2(c.dir.x, c.dir.z);
-                c.root.rotation.y = angle;
+                // c.root.rotation.y = angle; // Snap turn
+                c.root.rotation.y = BABYLON.Scalar.Lerp(c.root.rotation.y, angle, 5.0 * dt);
 
-                // Leg Animation (Walk Cycle)
-                // Left Front & Right Back match. Right Front & Left Back match.
-                var legAmp = 0.4;
+                // Animation
+                c.animTime += dt * 10.0;
+                var legAmp = 0.5;
                 c.legs[0].rotation.x = Math.sin(c.animTime) * legAmp; // FL
                 c.legs[3].rotation.x = Math.sin(c.animTime) * legAmp; // BR
-
                 c.legs[1].rotation.x = Math.cos(c.animTime) * legAmp; // FR
                 c.legs[2].rotation.x = Math.cos(c.animTime) * legAmp; // BL
             }
@@ -1013,20 +1025,31 @@ var wastelandRenderer = {
             var c2 = crate.clone(); c2.parent = campRoot; c2.position = new BABYLON.Vector3(2.2, 0.5, 2.1); c2.rotation.y = 0.5;
 
             // Fire
-            var fire = BABYLON.MeshBuilder.CreateBox("fire", { size: 0.5 }, scene);
-            fire.parent = campRoot;
-            fire.position.y = 0.25;
+            var fireBox = BABYLON.MeshBuilder.CreateBox("fire", { size: 0.5 }, scene);
+            fireBox.parent = campRoot;
+            fireBox.position = new BABYLON.Vector3(2, 0.25, 2);
             var fireMat = new BABYLON.StandardMaterial("fireMat", scene);
             fireMat.emissiveColor = new BABYLON.Color3(1, 0.5, 0);
-            fire.material = fireMat;
+            fireBox.material = fireMat;
 
-            // Light
-            var light = new BABYLON.PointLight("campLight" + i, new BABYLON.Vector3(0, 2, 0), scene);
-            light.parent = campRoot;
-            light.diffuse = new BABYLON.Color3(1, 0.6, 0.3);
-            light.range = 30;
+            // Simple Particles (Optional)
+            var fire = new BABYLON.ParticleSystem("fireP", 100, scene);
+            fire.emitter = fireBox.position.add(campRoot.position); // Global pos needed for particles often
+            // For now, skip particles to avoid complexity with local/global space parent issues
+
 
             this.survivorCamps.push(campRoot);
+
+            this.survivorCamps.push(campRoot);
+
+            // Residents (NPCs)
+            var numNpcs = 3; // Fixed 3 per camp (Performance)
+            for (var n = 0; n < numNpcs; n++) {
+                // Random offset
+                var nx = x + (Math.random() * 10) - 5;
+                var nz = z + (Math.random() * 10) - 5;
+                this.createSurvivor(scene, nx, nz);
+            }
         }
     },
 
@@ -1311,7 +1334,7 @@ var wastelandRenderer = {
             for (var camp of this.banditCamps) {
                 if (camp.hasSpawned) continue;
                 var dist = BABYLON.Vector3.Distance(this.vehicle.position, camp.position);
-                console.log("Dist to Camp: " + Math.round(dist) + " (Req: 200)");
+                // console.log("Dist to Camp: " + Math.round(dist) + " (Req: 200)");
                 if (dist < 200) { // Trigger Range Reduced to 200
                     camp.hasSpawned = true;
                     console.log("BANDIT AMBUSH!");
@@ -1484,5 +1507,174 @@ var wastelandRenderer = {
         }
 
         console.log("Enemy Destroyed!");
+    },
+    // --- SURVIVOR NPC SYSTEM ---
+    createSurvivor: function (scene, x, z) {
+        if (!this.survivors) this.survivors = [];
+
+        // Root
+        var npc = new BABYLON.TransformNode("npc", scene);
+        npc.position = new BABYLON.Vector3(x, 10, z); // Drop from sky high to test gravity
+        console.log("New Survivor Created at " + x + ", 10, " + z);
+
+        // Data
+        npc.data = {
+            state: "walk", // Force walk immediately
+            timer: 0.1,
+            origin: new BABYLON.Vector3(x, 0, z),
+            // Set initial target 5m away
+            target: new BABYLON.Vector3(x + 5, 0, z + 5),
+            animTime: Math.random() * 100
+        };
+
+        // --- VISUALS ---
+        var skinMat = new BABYLON.StandardMaterial("skin", scene);
+        skinMat.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.5);
+
+        var clothMat = new BABYLON.StandardMaterial("cloth", scene);
+        clothMat.diffuseColor = new BABYLON.Color3(0.6, 0.5, 0.4); // Brown rags
+
+        // 1. Torso
+        var torso = BABYLON.MeshBuilder.CreateBox("torso", { width: 0.5, height: 0.7, depth: 0.3 }, scene);
+        torso.parent = npc;
+        torso.position.y = 1.1;
+        torso.material = clothMat;
+
+        // 2. Head
+        var head = BABYLON.MeshBuilder.CreateSphere("head", { diameter: 0.35 }, scene);
+        head.parent = torso;
+        head.position.y = 0.5;
+        head.material = skinMat;
+
+        // 3. Limbs (Helper)
+        var createLimb = (w, h, px, py, pz) => {
+            var limb = BABYLON.MeshBuilder.CreateBox("limb", { width: w, height: h, depth: w }, scene);
+            var pivot = new BABYLON.TransformNode("piv", scene);
+            pivot.parent = npc;
+            pivot.position = new BABYLON.Vector3(px, py, pz);
+            limb.parent = pivot;
+            limb.position.y = -h / 2; // Hang down
+            limb.material = clothMat; // Pants/Sleeves
+            return pivot; // Return pivot for animation
+        };
+
+        // Arms
+        var leftArm = createLimb(0.15, 0.6, -0.35, 1.4, 0);
+        var rightArm = createLimb(0.15, 0.6, 0.35, 1.4, 0);
+
+        // Legs
+        var leftLeg = createLimb(0.2, 0.75, -0.15, 0.75, 0);
+        var rightLeg = createLimb(0.2, 0.75, 0.15, 0.75, 0);
+
+        npc.limbs = { la: leftArm, ra: rightArm, ll: leftLeg, rl: rightLeg };
+
+        // Backpack
+        var bag = BABYLON.MeshBuilder.CreateBox("bag", { width: 0.4, height: 0.5, depth: 0.2 }, scene);
+        bag.parent = torso;
+        bag.position.z = -0.25;
+        var bagMat = new BABYLON.StandardMaterial("bagMat", scene);
+        bagMat.diffuseColor = new BABYLON.Color3(0.3, 0.4, 0.2); // Olive
+        bag.material = bagMat;
+
+        this.survivors.push(npc);
+    },
+
+    updateSurvivors: function (dt) {
+        // Debug Spawn 'Q' (Commented out for Release)
+        /*
+        if (this.inputMap["q"] || this.inputMap["Q"]) {
+            this.inputMap["q"] = false;
+            this.inputMap["Q"] = false;
+            // console.log("DEBUG: Q Key Detected! Spawning Survivor...");
+
+            var fwd = this.vehicle.forward || new BABYLON.Vector3(0, 0, 1); 
+            var rot = this.vehicle.rotationQuaternion ? this.vehicle.rotationQuaternion.toEulerAngles() : this.vehicle.rotation;
+            var dir = new BABYLON.Vector3(Math.sin(rot.y), 0, Math.cos(rot.y));
+            
+            var spawnPos = this.vehicle.position.add(dir.scale(10));
+            this.createSurvivor(this.scene, spawnPos.x, spawnPos.z);
+            // console.log("Spawned Survivor at " + spawnPos);
+        }
+        */
+
+        if (!this.survivors) return;
+
+        var gravity = 9.8; // Increased Gravity for snappier fall
+
+        for (var s of this.survivors) {
+            // 1. Physics (Fall)
+            // 1. Physics (Fall)
+            var groundH = this.getHeightFast(s.position.x, s.position.z); // Optimization
+            var floor = groundH + 1.0; // 1.0 is the visual sweetspot (Feet on ground)
+
+            if (s.position.y > floor + 0.05) {
+                // Falling
+                s.position.y -= gravity * dt;
+                s.onGround = false;
+            } else {
+                // Landed
+                s.position.y = floor;
+                s.onGround = true;
+            }
+
+            // 2. State Machine
+            s.data.timer -= dt;
+            if (s.data.timer <= 0) {
+                if (s.data.state === "idle") {
+                    // Pick new target
+                    s.data.state = "walk";
+                    s.data.timer = 5.0 + Math.random() * 5.0;
+
+                    var angle = Math.random() * Math.PI * 2;
+                    var dist = 5 + Math.random() * 5;
+                    s.data.target.x = s.data.origin.x + Math.sin(angle) * dist;
+                    s.data.target.z = s.data.origin.z + Math.cos(angle) * dist;
+                } else {
+                    // Rest
+                    s.data.state = "idle";
+                    s.data.timer = 2.0 + Math.random() * 2.0;
+                }
+            }
+
+            // 3. Movement
+            if (s.data.state === "walk") {
+                var dx = s.data.target.x - s.position.x;
+                var dz = s.data.target.z - s.position.z;
+                var dist = Math.sqrt(dx * dx + dz * dz); // Distance to Target
+
+                if (dist < 0.5) {
+                    s.data.state = "idle";
+                    s.data.timer = 2.0;
+                } else {
+                    var speed = 3.0 * dt;
+                    s.position.x += (dx / dist) * speed;
+                    s.position.z += (dz / dist) * speed;
+
+                    // console.log("NPC Move Speed: " + speed); // verify loop running
+
+                    // Turn
+                    var desiredAngle = Math.atan2(dx, dz);
+                    // Simple lerp rotation
+                    var diff = desiredAngle - s.rotation.y;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    s.rotation.y += diff * 5.0 * dt;
+
+                    // Anim
+                    s.data.animTime += dt * 10;
+                    var sin = Math.sin(s.data.animTime);
+                    s.limbs.la.rotation.x = sin * 0.5;
+                    s.limbs.ra.rotation.x = -sin * 0.5;
+                    s.limbs.ll.rotation.x = -sin * 0.5;
+                    s.limbs.rl.rotation.x = sin * 0.5;
+                }
+            } else {
+                // Idle Pose
+                s.limbs.la.rotation.x *= 0.9;
+                s.limbs.ra.rotation.x *= 0.9;
+                s.limbs.ll.rotation.x *= 0.9;
+                s.limbs.rl.rotation.x *= 0.9;
+            }
+        }
     }
 };
