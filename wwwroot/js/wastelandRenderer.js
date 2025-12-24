@@ -537,6 +537,7 @@ var wastelandRenderer = {
         }
 
         this.updateProjectiles(dt);
+        this.updateEnemies(dt);
         // ---------------------
 
         // 14. HUD Update (Always run if defined)
@@ -1218,32 +1219,150 @@ var wastelandRenderer = {
 
             // Align with car rotation
             bullet.rotation.y = -this.facingAngle;
-            // Note: Our car rotation logic is -facingAngle.
-            // Gun is child of car, so getAbsolutePosition helps, but rotation needs to match global.
 
-            bullet.material = new BABYLON.StandardMaterial("tracer", scene);
-            bullet.material.emissiveColor = new BABYLON.Color3(1, 1, 0); // Yellow/Gold
-            bullet.material.disableLighting = true;
-
-            // Velocity Vector (Forward based on Car Facing)
-            // Car "Forward" is -Z in this engine? Or +Z?
-            // In updateVehicle: z += Math.cos(this.facingAngle).
-            // So Forward vector is (Sin, 0, Cos).
-
-            var speed = 200; // Units per sec (Fast!)
+            var speed = 200;
             var dir = new BABYLON.Vector3(Math.sin(this.facingAngle), 0, Math.cos(this.facingAngle));
 
             this.projectiles.push({
                 mesh: bullet,
                 direction: dir,
                 speed: speed,
-                life: 2.0 // Seconds
+                life: 2.0
             });
         };
 
         createBullet(this.leftGun);
         createBullet(this.rightGun);
     },
+
+    // --- ENEMY AI SYSTEM ---
+    createEnemyBuggy: function (scene, x, z) {
+        if (!this.enemies) this.enemies = [];
+
+        // Root
+        var enemy = new BABYLON.MeshBuilder.CreateBox("enemy", { width: 1, height: 1, depth: 1 }, scene);
+        enemy.isVisible = false;
+        enemy.position = new BABYLON.Vector3(x, 10, z); // Start high
+
+        var chassis = new BABYLON.TransformNode("e_chassis", scene);
+        chassis.parent = enemy;
+
+        // Body (Red)
+        var body = BABYLON.MeshBuilder.CreateBox("e_body", { width: 2.2, height: 0.8, depth: 4.5 }, scene);
+        body.parent = chassis;
+        body.position.y = 0.5;
+        var mat = new BABYLON.StandardMaterial("e_carMat", scene);
+        mat.diffuseColor = new BABYLON.Color3(0.5, 0.1, 0.1); // Bandit Red
+        body.material = mat;
+
+        // Roll Cage
+        var cage = BABYLON.MeshBuilder.CreateTorus("e_cage", { diameter: 2.0, thickness: 0.15, tessellation: 10 }, scene);
+        cage.parent = chassis;
+        cage.rotation.z = Math.PI / 2;
+        cage.position.z = -0.5; cage.position.y = 1.2; cage.scaling.y = 1.6;
+
+        // Wheels
+        var wheelMat = new BABYLON.StandardMaterial("e_wheelMat", scene);
+        wheelMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+        var createWheel = (wx, wz) => {
+            var w = BABYLON.MeshBuilder.CreateCylinder("w", { diameter: 1.7, height: 0.8 }, scene);
+            w.rotation.z = Math.PI / 2; w.parent = chassis;
+            w.position = new BABYLON.Vector3(wx, 0.4, wz); w.material = wheelMat;
+        };
+        createWheel(-1.4, 1.8); createWheel(1.4, 1.8);
+        createWheel(-1.4, -1.8); createWheel(1.4, -1.8);
+
+        // Stats
+        enemy.data = {
+            speed: 0,
+            velocity: new BABYLON.Vector3(0, 0, 0),
+            facingAngle: Math.random() * Math.PI * 2,
+            hp: 3 // Hits to kill
+        };
+
+        this.enemies.push(enemy);
+        // Add to Radar
+        this.createBlip(enemy, "Red", "enemy");
+    },
+
+    updateEnemies: function (dt) {
+        // Debug Spawn
+        if (this.inputMap["b"]) {
+            this.inputMap["b"] = false; // Trigger once
+            var fwd = new BABYLON.Vector3(Math.sin(this.facingAngle), 0, Math.cos(this.facingAngle));
+            var spawnPos = this.vehicle.position.add(fwd.scale(20));
+            this.createEnemyBuggy(this.scene, spawnPos.x, spawnPos.z);
+            console.log("Forced Spawn at: " + spawnPos);
+        }
+
+        if (!this.enemies) return;
+
+        // Bandit Camp Proximity Check
+        if (this.banditCamps) {
+            for (var camp of this.banditCamps) {
+                if (camp.hasSpawned) continue;
+                var dist = BABYLON.Vector3.Distance(this.vehicle.position, camp.position);
+                if (dist < 300) { // Trigger Range Increased to 300
+                    camp.hasSpawned = true;
+                    console.log("BANDIT AMBUSH!");
+                    // Spawn 3
+                    for (var i = 0; i < 3; i++) {
+                        var angle = i * (Math.PI * 2 / 3);
+                        var ex = camp.position.x + Math.sin(angle) * 20;
+                        var ez = camp.position.z + Math.cos(angle) * 20;
+                        this.createEnemyBuggy(this.scene, ex, ez);
+                    }
+                }
+            }
+        }
+
+        // AI Logic
+        for (var i = this.enemies.length - 1; i >= 0; i--) {
+            var e = this.enemies[i];
+
+            // Physics Movement
+            var gravity = 2.0; // Gravity
+            var groundH = this.getHeightAt(e.position.x, e.position.z);
+
+            // Turn towards Player
+            var targetPos = this.vehicle.position;
+            var dx = targetPos.x - e.position.x;
+            var dz = targetPos.z - e.position.z;
+            var desiredAngle = Math.atan2(dx, dz);
+
+            // Smooth Turn
+            // Lerp angle? For now, snap turn factor
+            var diff = desiredAngle - e.data.facingAngle;
+            // Normalize angle diff
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+
+            var turnRate = 2.0;
+            if (diff > 0.1) e.data.facingAngle += turnRate * dt;
+            else if (diff < -0.1) e.data.facingAngle -= turnRate * dt;
+
+            // Initial Velocity
+            // e.data.velocity ...
+            // Apply Gravity
+            if (e.position.y > groundH + 0.5) {
+                e.position.y -= gravity * dt;
+            } else {
+                e.position.y = groundH + 0.5; // Floor clamp for now, suspension later
+            }
+
+            var forward = new BABYLON.Vector3(Math.sin(e.data.facingAngle), 0, Math.cos(e.data.facingAngle));
+            var speed = 40; // Constant drive
+
+            // Move
+            e.position.x += forward.x * speed * dt;
+            e.position.z += forward.z * speed * dt;
+
+            // Update Mesh Rotation
+            e.rotation.y = e.data.facingAngle;
+        }
+    },
+
+
 
     updateProjectiles: function (dt) {
         if (!this.projectiles) return;
