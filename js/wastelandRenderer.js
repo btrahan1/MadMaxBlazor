@@ -230,134 +230,64 @@ var wastelandRenderer = {
     },
 
     createBuggy: function (scene) {
-        // Root
-        this.vehicle = new BABYLON.MeshBuilder.CreateBox("carRoot", { width: 1, height: 1, depth: 1 }, scene);
+        // 1. Physics Root (Invisible Driver)
+        this.vehicle = BABYLON.MeshBuilder.CreateBox("carRoot", { width: 1, height: 1, depth: 1 }, scene);
         this.vehicle.isVisible = false;
         this.vehicle.position.y = 10;
 
-        // Visual Root (For tilting/suspension visual only)
+        // 2. Synchronous Dummies (Predictive Logic so Update loop doesn't crash)
         this.chassis = new BABYLON.TransformNode("chassis", scene);
         this.chassis.parent = this.vehicle;
 
-        // Body Main
-        var body = BABYLON.MeshBuilder.CreateBox("body", { width: 2.2, height: 0.8, depth: 4.5 }, scene);
-        body.parent = this.chassis;
-        body.position.y = 0.5;
-        var mat = new BABYLON.StandardMaterial("carMat", scene);
-        mat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.35); // Dark Steel
-        mat.roughness = 1;
-        body.material = mat;
+        // Dummies for weapons (Invisible cylinders)
+        this.leftGun = BABYLON.MeshBuilder.CreateCylinder("lGun", { height: 1, diameter: 0.1 }, scene);
+        this.leftGun.isVisible = false;
+        this.leftGun.parent = this.chassis;
 
-        // Roll Cage (Torus)
-        var cage = BABYLON.MeshBuilder.CreateTorus("cage", { diameter: 2.0, thickness: 0.15, tessellation: 10 }, scene);
-        cage.parent = this.chassis;
-        cage.rotation.z = Math.PI / 2;
-        cage.position.z = -0.5;
-        cage.position.y = 1.2;
-        cage.scaling.y = 1.6;
+        this.rightGun = BABYLON.MeshBuilder.CreateCylinder("rGun", { height: 1, diameter: 0.1 }, scene);
+        this.rightGun.isVisible = false;
+        this.rightGun.parent = this.chassis;
 
-        // Roll Bar Cross (Visual)
-        var crossBar = BABYLON.MeshBuilder.CreateCylinder("crossBar", { diameter: 0.12, height: 1.8 }, scene);
-        crossBar.parent = cage;
-        crossBar.rotation.z = Math.PI / 2;
-        crossBar.position.y = 0.8;
+        // 3. Load Visuals
+        BABYLON.SceneLoader.ImportMeshAsync("", "WastelandRaider.glb", "", scene).then((result) => {
+            var root = result.meshes[0];
+            root.parent = this.vehicle;
+            var allNodes = result.transformNodes.concat(result.meshes);
+            allNodes.forEach(n => {
+                if (n.name.includes("Chassis")) this.chassis = n;
+                if (n.name.includes("GunL")) { this.leftGun.dispose(); this.leftGun = n; }
+                if (n.name.includes("GunR")) { this.rightGun.dispose(); this.rightGun = n; }
+            });
+            console.log("Buggy Loaded.");
+        });
 
-        // Front Bars
-        var frontBar = BABYLON.MeshBuilder.CreateCylinder("frontBar", { diameter: 0.12, height: 2.2 }, scene);
-        frontBar.parent = this.chassis;
-        frontBar.position = new BABYLON.Vector3(0, 1.2, 1.5);
-        frontBar.rotation.z = Math.PI / 2;
+        // 4. Particle & Stats (Re-adding them here)
+        this.speed = 0;
+        this.velocity = new BABYLON.Vector3(0, 0, 0);
+        this.facingAngle = 0;
 
-        // Engine Block (Rear)
-        var engine = BABYLON.MeshBuilder.CreateBox("engine", { width: 1.8, height: 1.2, depth: 1.2 }, scene);
-        engine.parent = this.chassis;
-        engine.position.z = -1.8;
-        engine.position.y = 1.0;
-        var engineMat = new BABYLON.StandardMaterial("engMat", scene);
-        engineMat.diffuseColor = new BABYLON.Color3(0.2, 0.1, 0.1);
-
-        // --- WEAPONS: Twin Mounted Machine Guns ---
-        var gunMat = new BABYLON.StandardMaterial("gunMat", scene);
-        gunMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.1); // Black Metal
-
-        var createGun = (side) => {
-            var gun = BABYLON.MeshBuilder.CreateCylinder("gun" + side, { diameter: 0.15, height: 1.5 }, scene);
-            gun.parent = this.chassis;
-            gun.rotation.x = Math.PI / 2; // Point Forward
-            gun.position = new BABYLON.Vector3(side * 0.8, 1.2, 1.5); // Hood position
-            gun.material = gunMat;
-            return gun;
-        };
-        this.leftGun = createGun(-1);
-        this.rightGun = createGun(1);
-
-        this.projectiles = []; // Store active bullets
-        this.lastFireTime = 0;
-        // ------------------------------------------
-        engine.material = engineMat;
-
-        // Spikes (Front)
-        var spike = BABYLON.MeshBuilder.CreateCylinder("spike", { diameterTop: 0, diameterBottom: 0.2, height: 1 }, scene);
-        spike.rotation.x = Math.PI / 2;
-        spike.parent = this.chassis;
-        spike.position = new BABYLON.Vector3(0.8, 0.5, 2.5);
-        spike.material = mat;
-
-        var spike2 = spike.clone(); spike2.parent = this.chassis; spike2.position.x = -0.8;
-
-        // Wheels
-        var wheelMat = new BABYLON.StandardMaterial("wheelMat", scene);
-        wheelMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.15); // Blacker
-        wheelMat.specularColor = new BABYLON.Color3(0, 0, 0);
-
-        var createWheel = (x, z) => {
-            // Main tire
-            var w = BABYLON.MeshBuilder.CreateCylinder("w", { diameter: 1.7, height: 0.8, tessellation: 12 }, scene);
-            w.rotation.z = Math.PI / 2;
-            w.parent = this.chassis;
-            w.position = new BABYLON.Vector3(x, 0.4, z);
-            w.material = wheelMat;
-
-            // Knobs (Rugged look via low poly and scale)
-            // Or just a hubcap spike
-            var hub = BABYLON.MeshBuilder.CreateCylinder("hub", { diameterTop: 0.2, diameterBottom: 0.5, height: 0.6 }, scene);
-            hub.parent = w;
-            hub.position.y = (x > 0 ? 0.3 : -0.3);
-            return w;
-        };
-
-        createWheel(-1.4, 1.8);
-        createWheel(1.4, 1.8);
-        this.leftRear = createWheel(-1.4, -1.8);
-        this.rightRear = createWheel(1.4, -1.8);
-
-        // Dust Particle System
         this.dustSystem = new BABYLON.ParticleSystem("dust", 2000, scene);
         this.dustSystem.particleTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/flare.png", scene);
-        this.dustSystem.emitter = this.vehicle; // Emits from center for now, offset in update
+        this.dustSystem.emitter = this.vehicle;
         this.dustSystem.minEmitBox = new BABYLON.Vector3(-1, 0, -2);
         this.dustSystem.maxEmitBox = new BABYLON.Vector3(1, 0, -2.5);
         this.dustSystem.color1 = new BABYLON.Color4(0.8, 0.6, 0.4, 0.5);
         this.dustSystem.color2 = new BABYLON.Color4(0.8, 0.6, 0.4, 0.0);
         this.dustSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
-        this.dustSystem.minSize = 0.5;
-        this.dustSystem.maxSize = 1.5;
-        this.dustSystem.minLifeTime = 0.5;
-        this.dustSystem.maxLifeTime = 1.5;
-        this.dustSystem.emitRate = 0; // Controlled by speed
+        this.dustSystem.minSize = 0.5; this.dustSystem.maxSize = 1.5;
+        this.dustSystem.minLifeTime = 0.5; this.dustSystem.maxLifeTime = 1.5;
+        this.dustSystem.emitRate = 0;
         this.dustSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
         this.dustSystem.gravity = new BABYLON.Vector3(0, 0, 0);
         this.dustSystem.direction1 = new BABYLON.Vector3(-1, 2, -1);
         this.dustSystem.direction2 = new BABYLON.Vector3(1, 2, -1);
-        this.dustSystem.minAngularSpeed = 0;
-        this.dustSystem.maxAngularSpeed = Math.PI;
+        this.dustSystem.minAngularSpeed = 0; this.dustSystem.maxAngularSpeed = Math.PI;
         this.dustSystem.start();
-
-        // Stats
-        this.speed = 0;
-        this.velocity = new BABYLON.Vector3(0, 0, 0); // Real world velocity
-        this.facingAngle = 0;
     },
+
+
+
+
 
     update: function () {
         if (!this.vehicle) return;
@@ -372,6 +302,18 @@ var wastelandRenderer = {
         var baseAccel = 60 * this.speedRatio;
 
         var topSpeed = isTurbo ? baseSpeed : (baseSpeed * 0.7);
+
+        // Update Subsystems
+        this.updateProjectiles(dt);
+        this.updateRadar();
+        this.updateBosses(dt);
+        this.updateSpider(dt); // <--- Added Spider Update Here
+
+        // Update Subsystems
+        this.updateProjectiles(dt);
+        this.updateRadar();
+        this.updateBosses(dt);
+        this.updateSpider(dt); // <--- Added Spider Update Here
         var accelRate = isTurbo ? baseAccel : (baseAccel * 0.5);
         var turnRate = isTurbo ? 2.5 : 3.5;
 
@@ -644,12 +586,13 @@ var wastelandRenderer = {
                 ruin.position = new BABYLON.Vector3(x, y, z);
             }
 
-            // Beacon Light (Red Signal)
-            var light = new BABYLON.PointLight("ruinLight" + i, new BABYLON.Vector3(0, 20, 0), scene);
-            light.parent = ruin;
-            light.diffuse = new BABYLON.Color3(1, 0, 0); // Red Signal
-            light.range = 80;
-            light.intensity = 2.0;
+            // Beacon Light (Red Signal) - REMOVED for Performance (Shader Limits)
+            // Use Emissive color on the mesh instead if we want it to look "lit"
+            // var light = new BABYLON.PointLight("ruinLight" + i, new BABYLON.Vector3(0, 20, 0), scene);
+            // light.parent = ruin;
+            // light.diffuse = new BABYLON.Color3(1, 0, 0); 
+            // light.range = 80;
+            // light.intensity = 2.0;
 
             this.ruins.push(ruin);
         }
@@ -734,12 +677,12 @@ var wastelandRenderer = {
             // Final Placement
             structure.position = new BABYLON.Vector3(x, y, z);
 
-            // Beacon Light (Under Canopy)
-            var light = new BABYLON.PointLight("gasLight" + i, new BABYLON.Vector3(0, 5, 0), scene);
-            light.parent = structure;
-            light.diffuse = new BABYLON.Color3(0.2, 0.5, 1.0); // Cyan/Blue Glow
-            light.range = 60;
-            light.intensity = 1.5;
+            // Beacon Light (Under Canopy) - REMOVED for Performance
+            // var light = new BABYLON.PointLight("gasLight" + i, new BABYLON.Vector3(0, 5, 0), scene);
+            // light.parent = structure;
+            // light.diffuse = new BABYLON.Color3(0.2, 0.5, 1.0); 
+            // light.range = 60;
+            // light.intensity = 1.5;
 
             this.gasStations.push(structure);
         }
@@ -1518,6 +1461,107 @@ var wastelandRenderer = {
         console.log("Enemy Destroyed!");
     },
 
+    // --- SPIDER SYSTEM ---
+    spawnSpider: function (scene, x, z) {
+        BABYLON.SceneLoader.ImportMeshAsync("", "./", "Wasteland_Widow.glb", scene).then((result) => {
+            var root = result.meshes[0];
+            if (!root.scaling) root.scaling = new BABYLON.Vector3(1, 1, 1);
+
+            // 1. Gravity Fix
+            var y = this.getHeightAt ? this.getHeightAt(x, z) : 10;
+            root.position = new BABYLON.Vector3(x, y + 2.5, z);
+
+            // 2. Find Legs
+            var legs = [];
+            var allNodes = result.transformNodes.concat(result.meshes);
+            allNodes.forEach(n => {
+                if (n.name.includes("Leg")) {
+
+                    // CRITICAL FIX: GLB uses Quaternions by default.
+                    // We must convert to Euler to animate .rotation manually.
+                    if (n.rotationQuaternion) {
+                        n.rotation = n.rotationQuaternion.toEulerAngles();
+                        n.rotationQuaternion = null;
+                    }
+
+                    n.metadata = {
+                        baseRot: n.rotation.clone(),
+                        phase: Math.random() * Math.PI * 2
+                    };
+                    legs.push(n);
+                }
+            });
+
+            console.log("SPIDER DEPLOYED. Legs: " + legs.length);
+
+            // 3. Add to Swarm
+            if (!this.spiders) this.spiders = [];
+            this.spiders.push({
+                root: root,
+                legs: legs,
+                t: Math.random() * 100, // Random phase
+                speed: 4.0,             // Movement speed (Halved)
+                dir: new BABYLON.Vector3(0, 0, 1),
+                targetIndex: Math.floor(Math.random() * (this.ruins ? this.ruins.length : 1))
+            });
+        });
+    },
+
+    updateSpider: function (dt) {
+        if (!this.spiders) return;
+
+        for (var i = this.spiders.length - 1; i >= 0; i--) {
+            var s = this.spiders[i];
+
+            // Cleanup dead spiders
+            if (!s.root || s.root.isDisposed()) {
+                this.spiders.splice(i, 1);
+                continue;
+            }
+
+            s.t += dt * 15.0; // Fast twitch
+
+            // --- AI & MOVEMENT ---
+            if (this.ruins && this.ruins.length > 0) {
+                var target = this.ruins[s.targetIndex];
+                var dx = target.position.x - s.root.position.x;
+                var dz = target.position.z - s.root.position.z;
+                var dist = Math.sqrt(dx * dx + dz * dz);
+
+                if (dist < 10.0) {
+                    // Reached Waypoint -> Pick Next
+                    s.targetIndex = (s.targetIndex + 1) % this.ruins.length;
+                } else {
+                    // Steer towards target
+                    var desiredDir = new BABYLON.Vector3(dx, 0, dz).normalize();
+                    // Smooth turn (Lerp)
+                    s.dir = BABYLON.Vector3.Lerp(s.dir, desiredDir, 2.0 * dt);
+                }
+            }
+
+            // Move
+            var velocity = s.dir.scale(s.speed * dt);
+            s.root.position.addInPlace(velocity);
+
+            // Rotate Body to Face Direction
+            var targetAngle = Math.atan2(s.dir.x, s.dir.z);
+            s.root.rotation.y = targetAngle;
+
+            // Terrain Follow (The "Land" request)
+            var groundY = this.getHeightAt(s.root.position.x, s.root.position.z);
+            s.root.position.y = BABYLON.Scalar.Lerp(s.root.position.y, groundY + 2.5, 10 * dt) + Math.sin(s.t * 0.5) * 0.1;
+
+            // Leg Twitch
+            s.legs.forEach(l => {
+                var offset = Math.sin(s.t + l.metadata.phase) * 0.8;
+                l.rotation.x = l.metadata.baseRot.x + offset * 0.5;
+                l.rotation.y = l.metadata.baseRot.y + offset * 0.3;
+                l.rotation.z = l.metadata.baseRot.z + offset * 0.2;
+            });
+        }
+    },
+
+
     // --- BOSS SYSTEM (The War Rig) ---
     createBossTanker: function (scene, x, z) {
         if (!this.bosses) this.bosses = [];
@@ -1590,6 +1634,15 @@ var wastelandRenderer = {
             var fwd = this.vehicle.forward || new BABYLON.Vector3(0, 0, 1);
             var spawnPos = this.vehicle.position.add(fwd.scale(40)); // Spawn further out
             this.createBossTanker(this.scene, spawnPos.x, spawnPos.z);
+        }
+
+        // Spawn Spider '!' (Shift+1)
+        if (this.inputMap["!"] || (this.inputMap["1"] && this.inputMap["shift"])) {
+            this.inputMap["!"] = false;
+            this.inputMap["1"] = false;
+            var fwd = this.vehicle.forward || new BABYLON.Vector3(0, 0, 1);
+            var spawnPos = this.vehicle.position.add(fwd.scale(20));
+            this.spawnSpider(this.scene, spawnPos.x, spawnPos.z);
         }
 
         if (!this.bosses) return;
@@ -1761,7 +1814,7 @@ var wastelandRenderer = {
             this.inputMap["q"] = false;
             this.inputMap["Q"] = false;
             // console.log("DEBUG: Q Key Detected! Spawning Survivor...");
-
+     
             var fwd = this.vehicle.forward || new BABYLON.Vector3(0, 0, 1); 
             var rot = this.vehicle.rotationQuaternion ? this.vehicle.rotationQuaternion.toEulerAngles() : this.vehicle.rotation;
             var dir = new BABYLON.Vector3(Math.sin(rot.y), 0, Math.cos(rot.y));
