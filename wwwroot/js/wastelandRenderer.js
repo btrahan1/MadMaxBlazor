@@ -63,6 +63,7 @@ var wastelandRenderer = {
 
                 if (key === "!" || key === "1") WastelandNPCs.spawnSpider(this.scene, p.position.x, p.position.z, this);
                 if (key === "@" || key === "2") WastelandNPCs.spawnHelicopter(this.scene, p.position.x, p.position.z, this);
+                if (key === "#" || key === "3") WastelandNPCs.spawnNuclearHydra(this.scene, p.position.x, p.position.z, this);
             }
         }));
         this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, (evt) => {

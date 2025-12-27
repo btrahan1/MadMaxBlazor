@@ -5,6 +5,7 @@ var WastelandNPCs = {
     spiders: [],
     helis: [],
     bosses: [],
+    hydras: [],
 
     init: function (scene) {
         // Any global init for NPCs
@@ -207,6 +208,42 @@ var WastelandNPCs = {
         });
     },
 
+    spawnNuclearHydra: function (scene, x, z, core) {
+        BABYLON.SceneLoader.ImportMeshAsync("", "./", "NuclearHydra.glb", scene).then((result) => {
+            var root = result.meshes[0];
+            var groundY = core.getHeightAt(x, z);
+            root.position = new BABYLON.Vector3(x, groundY + 10, z); // Starts in air
+            root.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
+
+            var parts = {};
+            result.transformNodes.concat(result.meshes).forEach(n => {
+                if (n.rotationQuaternion) { n.rotation = n.rotationQuaternion.toEulerAngles(); n.rotationQuaternion = null; }
+                if (n.name.includes("wing_l_1")) parts.wingL1 = n;
+                if (n.name.includes("wing_l_2")) parts.wingL2 = n;
+                if (n.name.includes("wing_r_1")) parts.wingR1 = n;
+                if (n.name.includes("wing_r_2")) parts.wingR2 = n;
+                if (n.name.includes("neck_c")) parts.neckC = n;
+                if (n.name.includes("neck_l")) parts.neckL = n;
+                if (n.name.includes("neck_r")) parts.neckR = n;
+                if (n.name.includes("head_c")) parts.headC = n;
+                if (n.name.includes("head_l")) parts.headL = n;
+                if (n.name.includes("head_r")) parts.headR = n;
+            });
+
+            this.hydras.push({
+                root: root,
+                parts: parts,
+                t: 0,
+                hp: 500,
+                speed: 8.0,
+                dir: new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize()
+            });
+
+            core.createBlip(root, "Magenta", "boss");
+            console.log("THE NUCLEAR HYDRA HAS AWAKENED!");
+        });
+    },
+
     createBossTanker: function (scene, x, z, core) {
         var cab = new BABYLON.MeshBuilder.CreateBox("bossCab", { width: 3.5, height: 4, depth: 5 }, scene);
         cab.position = new BABYLON.Vector3(x, 10, z);
@@ -245,6 +282,7 @@ var WastelandNPCs = {
         this.updateSpiders(dt, core);
         this.updateHelis(dt, core);
         this.updateBosses(dt, core);
+        this.updateHydras(dt, core);
     },
 
     updateFauna: function (dt, core) {
@@ -391,6 +429,56 @@ var WastelandNPCs = {
                 b.trailer.position.y = core.getHeightFast(b.trailer.position.x, b.trailer.position.z) + 2.0;
                 b.trailer.rotation.y = Math.atan2(diffT.x, diffT.z);
             }
+        });
+    },
+
+    updateHydras: function (dt, core) {
+        this.hydras.forEach(h => {
+            h.t += dt;
+
+            // Movement: Slowly circle/follow player at height
+            var dist = BABYLON.Vector3.Distance(h.root.position, core.vehicle.position);
+            var targetDir = core.vehicle.position.subtract(h.root.position).normalize();
+            targetDir.y = 0;
+
+            if (dist > 50) {
+                h.dir = BABYLON.Vector3.Lerp(h.dir, targetDir, 0.5 * dt).normalize();
+            } else {
+                // Circle behavior
+                var right = BABYLON.Vector3.Cross(targetDir, BABYLON.Vector3.Up());
+                h.dir = BABYLON.Vector3.Lerp(h.dir, right, 0.5 * dt).normalize();
+            }
+
+            h.root.position.addInPlace(h.dir.scale(h.speed * dt));
+            var gH = core.getHeightFast(h.root.position.x, h.root.position.z);
+            var targetH = gH + 15 + Math.sin(h.t * 0.5) * 5;
+            h.root.position.y = BABYLON.Scalar.Lerp(h.root.position.y, targetH, dt);
+            h.root.rotation.y = Math.atan2(h.dir.x, h.dir.z);
+
+            // Wing Animation
+            var flap = Math.sin(h.t * 3.0);
+            if (h.parts.wingL1) h.parts.wingL1.rotation.z = 0.3 + flap * 0.4;
+            if (h.parts.wingL2) h.parts.wingL2.rotation.z = flap * 0.5;
+            if (h.parts.wingR1) h.parts.wingR1.rotation.z = -0.3 - flap * 0.4;
+            if (h.parts.wingR2) h.parts.wingR2.rotation.z = -flap * 0.5;
+
+            // Neck Weaving
+            var weave = Math.sin(h.t * 1.5);
+            if (h.parts.neckC) { h.parts.neckC.rotation.y = weave * 0.2; h.parts.neckC.rotation.x = 0.4 + weave * 0.1; }
+            if (h.parts.neckL) { h.parts.neckL.rotation.y = -0.5 + weave * 0.3; h.parts.neckL.rotation.x = weave * 0.2; }
+            if (h.parts.neckR) { h.parts.neckR.rotation.y = 0.5 + weave * 0.3; h.parts.neckR.rotation.x = -weave * 0.2; }
+
+            // Heads look at player
+            var lookAtPlayer = (head) => {
+                if (!head) return;
+                var currentRot = head.rotation.clone();
+                head.lookAt(core.vehicle.position);
+                // Constrain lookAt if needed, or just let it be creepy
+                // head.rotation.x = currentRot.x; // Keep pitch if preferred
+            };
+            lookAtPlayer(h.parts.headC);
+            lookAtPlayer(h.parts.headL);
+            lookAtPlayer(h.parts.headR);
         });
     }
 };
