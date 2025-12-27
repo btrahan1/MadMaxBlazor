@@ -1,0 +1,626 @@
+{
+    "name": "SpiderCar",
+    "Parts": [
+        {
+            "Id": "ChassisRoot",
+            "Shape": "Box",
+            "Position": [
+                0,
+                1.5,
+                0
+            ],
+            "Scale": [
+                1.5,
+                0.8,
+                3.0
+            ],
+            "ColorHex": "#2a2a2a"
+        },
+        {
+            "Id": "Head",
+            "ParentId": "ChassisRoot",
+            "Shape": "Box",
+            "Position": [
+                0,
+                0,
+                1.2
+            ],
+            "Scale": [
+                1.2,
+                0.6,
+                1.0
+            ],
+            "ColorHex": "#1a1a1a"
+        },
+        {
+            "Id": "EyeL",
+            "ParentId": "Head",
+            "Shape": "Sphere",
+            "Position": [
+                -0.3,
+                0.2,
+                0.5
+            ],
+            "Scale": [
+                0.2,
+                0.2,
+                0.2
+            ],
+            "ColorHex": "#ff0000"
+        },
+        {
+            "Id": "EyeR",
+            "ParentId": "Head",
+            "Shape": "Sphere",
+            "Position": [
+                0.3,
+                0.2,
+                0.5
+            ],
+            "Scale": [
+                0.2,
+                0.2,
+                0.2
+            ],
+            "ColorHex": "#ff0000"
+        },
+        {
+            "Id": "MandibleL",
+            "ParentId": "Head",
+            "Shape": "Cone",
+            "Position": [
+                -0.4,
+                -0.2,
+                0.6
+            ],
+            "Rotation": [
+                0,
+                -0.5,
+                90
+            ],
+            "Scale": [
+                0.15,
+                0.8,
+                0.15
+            ],
+            "ColorHex": "#dddddd"
+        },
+        {
+            "Id": "MandibleR",
+            "ParentId": "Head",
+            "Shape": "Cone",
+            "Position": [
+                0.4,
+                -0.2,
+                0.6
+            ],
+            "Rotation": [
+                0,
+                0.5,
+                90
+            ],
+            "Scale": [
+                0.15,
+                0.8,
+                0.15
+            ],
+            "ColorHex": "#dddddd"
+        },
+        {
+            "Id": "Abdomen",
+            "ParentId": "ChassisRoot",
+            "Shape": "Sphere",
+            "Position": [
+                0,
+                0.5,
+                -1.0
+            ],
+            "Scale": [
+                2.0,
+                1.8,
+                2.5
+            ],
+            "ColorHex": "#111111"
+        },
+        {
+            "Id": "Marking",
+            "ParentId": "Abdomen",
+            "Shape": "Cone",
+            "Position": [
+                0,
+                0.9,
+                0
+            ],
+            "Scale": [
+                0.8,
+                0.5,
+                0.8
+            ],
+            "ColorHex": "#880000"
+        },
+        {
+            "Id": "Leg1L",
+            "ParentId": "ChassisRoot",
+            "Shape": "Cylinder",
+            "Position": [
+                -0.8,
+                0,
+                0.5
+            ],
+            "Rotation": [
+                0,
+                0,
+                0.5
+            ],
+            "Scale": [
+                0.2,
+                2.0,
+                0.2
+            ],
+            "ColorHex": "#333333"
+        },
+        {
+            "Id": "Leg1R",
+            "ParentId": "ChassisRoot",
+            "Shape": "Cylinder",
+            "Position": [
+                0.8,
+                0,
+                0.5
+            ],
+            "Rotation": [
+                0,
+                0,
+                -0.5
+            ],
+            "Scale": [
+                0.2,
+                2.0,
+                0.2
+            ],
+            "ColorHex": "#333333"
+        },
+        {
+            "Id": "Leg2L",
+            "ParentId": "ChassisRoot",
+            "Shape": "Cylinder",
+            "Position": [
+                -0.9,
+                0,
+                -0.2
+            ],
+            "Rotation": [
+                0,
+                0.2,
+                0.5
+            ],
+            "Scale": [
+                0.2,
+                2.2,
+                0.2
+            ],
+            "ColorHex": "#333333"
+        },
+        {
+            "Id": "Leg2R",
+            "ParentId": "ChassisRoot",
+            "Shape": "Cylinder",
+            "Position": [
+                0.9,
+                0,
+                -0.2
+            ],
+            "Rotation": [
+                0,
+                -0.2,
+                -0.5
+            ],
+            "Scale": [
+                0.2,
+                2.2,
+                0.2
+            ],
+            "ColorHex": "#333333"
+        },
+        {
+            "Id": "WheelFL",
+            "ParentId": "ChassisRoot",
+            "Shape": "Cylinder",
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Position": [
+                -1.8,
+                -0.5,
+                1.5
+            ],
+            "Scale": [
+                1.2,
+                0.4,
+                1.2
+            ],
+            "ColorHex": "#eecfa1"
+        },
+        {
+            "Id": "SpikeFL1",
+            "ParentId": "WheelFL",
+            "Shape": "Cone",
+            "Position": [
+                0,
+                0.6,
+                0
+            ],
+            "Scale": [
+                0.2,
+                0.8,
+                0.2
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeFL2",
+            "ParentId": "WheelFL",
+            "Shape": "Cone",
+            "Position": [
+                0,
+                -0.6,
+                0
+            ],
+            "Rotation": [
+                180,
+                0,
+                0
+            ],
+            "Scale": [
+                0.2,
+                0.8,
+                0.2
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeFL3",
+            "ParentId": "WheelFL",
+            "Shape": "Cone",
+            "Position": [
+                0.6,
+                0,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                -90
+            ],
+            "Scale": [
+                0.2,
+                0.8,
+                0.2
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeFL4",
+            "ParentId": "WheelFL",
+            "Shape": "Cone",
+            "Position": [
+                -0.6,
+                0,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Scale": [
+                0.2,
+                0.8,
+                0.2
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "WheelFR",
+            "ParentId": "ChassisRoot",
+            "Shape": "Cylinder",
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Position": [
+                1.8,
+                -0.5,
+                1.5
+            ],
+            "Scale": [
+                1.2,
+                0.4,
+                1.2
+            ],
+            "ColorHex": "#eecfa1"
+        },
+        {
+            "Id": "SpikeFR1",
+            "ParentId": "WheelFR",
+            "Shape": "Cone",
+            "Position": [
+                0,
+                0.6,
+                0
+            ],
+            "Scale": [
+                0.2,
+                0.8,
+                0.2
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeFR2",
+            "ParentId": "WheelFR",
+            "Shape": "Cone",
+            "Position": [
+                0,
+                -0.6,
+                0
+            ],
+            "Rotation": [
+                180,
+                0,
+                0
+            ],
+            "Scale": [
+                0.2,
+                0.8,
+                0.2
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeFR3",
+            "ParentId": "WheelFR",
+            "Shape": "Cone",
+            "Position": [
+                0.6,
+                0,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                -90
+            ],
+            "Scale": [
+                0.2,
+                0.8,
+                0.2
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeFR4",
+            "ParentId": "WheelFR",
+            "Shape": "Cone",
+            "Position": [
+                -0.6,
+                0,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Scale": [
+                0.2,
+                0.8,
+                0.2
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "WheelRL",
+            "ParentId": "ChassisRoot",
+            "Shape": "Cylinder",
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Position": [
+                -1.8,
+                -0.5,
+                -1.5
+            ],
+            "Scale": [
+                1.4,
+                0.5,
+                1.4
+            ],
+            "ColorHex": "#eecfa1"
+        },
+        {
+            "Id": "SpikeRL1",
+            "ParentId": "WheelRL",
+            "Shape": "Cone",
+            "Position": [
+                0,
+                0.7,
+                0
+            ],
+            "Scale": [
+                0.25,
+                1.0,
+                0.25
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeRL2",
+            "ParentId": "WheelRL",
+            "Shape": "Cone",
+            "Position": [
+                0,
+                -0.7,
+                0
+            ],
+            "Rotation": [
+                180,
+                0,
+                0
+            ],
+            "Scale": [
+                0.25,
+                1.0,
+                0.25
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeRL3",
+            "ParentId": "WheelRL",
+            "Shape": "Cone",
+            "Position": [
+                0.7,
+                0,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                -90
+            ],
+            "Scale": [
+                0.25,
+                1.0,
+                0.25
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeRL4",
+            "ParentId": "WheelRL",
+            "Shape": "Cone",
+            "Position": [
+                -0.7,
+                0,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Scale": [
+                0.25,
+                1.0,
+                0.25
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "WheelRR",
+            "ParentId": "ChassisRoot",
+            "Shape": "Cylinder",
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Position": [
+                1.8,
+                -0.5,
+                -1.5
+            ],
+            "Scale": [
+                1.4,
+                0.5,
+                1.4
+            ],
+            "ColorHex": "#eecfa1"
+        },
+        {
+            "Id": "SpikeRR1",
+            "ParentId": "WheelRR",
+            "Shape": "Cone",
+            "Position": [
+                0,
+                0.7,
+                0
+            ],
+            "Scale": [
+                0.25,
+                1.0,
+                0.25
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeRR2",
+            "ParentId": "WheelRR",
+            "Shape": "Cone",
+            "Position": [
+                0,
+                -0.7,
+                0
+            ],
+            "Rotation": [
+                180,
+                0,
+                0
+            ],
+            "Scale": [
+                0.25,
+                1.0,
+                0.25
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeRR3",
+            "ParentId": "WheelRR",
+            "Shape": "Cone",
+            "Position": [
+                0.7,
+                0,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                -90
+            ],
+            "Scale": [
+                0.25,
+                1.0,
+                0.25
+            ],
+            "ColorHex": "#ffffff"
+        },
+        {
+            "Id": "SpikeRR4",
+            "ParentId": "WheelRR",
+            "Shape": "Cone",
+            "Position": [
+                -0.7,
+                0,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Scale": [
+                0.25,
+                1.0,
+                0.25
+            ],
+            "ColorHex": "#ffffff"
+        }
+    ]
+}

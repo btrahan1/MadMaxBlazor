@@ -11,6 +11,8 @@ var wastelandRenderer = {
     fuel: 100,
     scrap: 0,
     speedRatio: 0.5, // Default to 50 (Half speed)
+    isDriving: true,
+    lastSpawnTime: 0,
 
     setSpeedRatio: function (val) {
         // Map 1-100 to 0.25 - 1.0
@@ -47,6 +49,23 @@ var wastelandRenderer = {
             var key = evt.sourceEvent.key.toLowerCase();
             this.inputMap[key] = true;
             if (key === " ") evt.sourceEvent.preventDefault(); // Stop Scrolling
+
+            // Toggle Hero Mode (P)
+            if (key === "p") {
+                this.toggleVehicle();
+            }
+
+            // Debug Spawning (Shift + 1/2)
+            if (evt.sourceEvent.shiftKey) {
+                var now = Date.now();
+                if (this.lastSpawnTime && (now - this.lastSpawnTime < 500)) return;
+                this.lastSpawnTime = now;
+
+                var p = this.vehicle ? this.vehicle : { position: new BABYLON.Vector3(0, 0, 0), rotationQuaternion: new BABYLON.Quaternion() };
+
+                if (key === "!" || key === "1") this.spawnSpider(p);
+                if (key === "@" || key === "2") this.spawnHelicopter(p);
+            }
         }));
         this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, (evt) => {
             var key = evt.sourceEvent.key.toLowerCase();
@@ -96,16 +115,16 @@ var wastelandRenderer = {
         this.createBuggy(scene);
 
         // Camera
-        this.camera = new BABYLON.FollowCamera("FollowCam", new BABYLON.Vector3(0, 10, -20), scene);
-        this.camera.lockedTarget = this.vehicle;
-        this.camera.radius = 25; // Further back for speed sensation
-        this.camera.heightOffset = 10;
-        this.camera.rotationOffset = 180;
-        this.camera.cameraAcceleration = 0.05;
-        this.camera.maxCameraSpeed = 400; // [FIX] Needs to be much faster than car (150)
+        // Camera
+        this.camera = new BABYLON.ArcRotateCamera("MainCam", -Math.PI / 2, Math.PI / 3, 30, new BABYLON.Vector3(0, 0, 0), scene);
+        this.camera.lockedTarget = this.vehicle; // Lock to car initially
+        this.camera.attachControl(this.canvas, true);
 
-        this.camera.lowerRadiusLimit = 10;
-        this.camera.lowerHeightOffsetLimit = 5; // Don't dig into ground
+        // Limits
+        this.camera.lowerRadiusLimit = 5;
+        this.camera.upperRadiusLimit = 60;
+        this.camera.checkCollisions = true; // Don't clip underground
+        this.camera.collisionRadius = new BABYLON.Vector3(0.5, 0.5, 0.5);
 
         return scene;
     },
@@ -307,22 +326,23 @@ var wastelandRenderer = {
         this.updateProjectiles(dt);
         this.updateRadar();
         this.updateBosses(dt);
-        this.updateSpider(dt); // <--- Added Spider Update Here
+        this.updateSpider(dt);
+        this.updateHelicopter(dt);
+        this.updateHero(dt);
 
-        // Update Subsystems
-        this.updateProjectiles(dt);
-        this.updateRadar();
-        this.updateBosses(dt);
-        this.updateSpider(dt); // <--- Added Spider Update Here
         var accelRate = isTurbo ? baseAccel : (baseAccel * 0.5);
         var turnRate = isTurbo ? 2.5 : 3.5;
 
         var throttle = 0;
         var steer = 0;
-        if (this.inputMap["w"]) throttle = 1;
-        if (this.inputMap["s"]) throttle = -0.5;
-        if (this.inputMap["a"]) steer = -1;
-        if (this.inputMap["d"]) steer = 1;
+
+        // Only drive if in car
+        if (this.isDriving) {
+            if (this.inputMap["w"]) throttle = 1;
+            if (this.inputMap["s"]) throttle = -0.5;
+            if (this.inputMap["a"]) steer = -1;
+            if (this.inputMap["d"]) steer = 1;
+        }
 
         // 2. Physics Model (Simple Arcade Drifter)
 
@@ -1561,6 +1581,130 @@ var wastelandRenderer = {
         }
     },
 
+    // --- HELICOPTER SYSTEM ---
+    spawnHelicopter: function (scene, x, z) {
+        console.log("Attempting to spawn Helicopter at " + x + ", " + z);
+        BABYLON.SceneLoader.ImportMeshAsync("", "./", "WastelandHellCopter.glb", scene).then((result) => {
+            console.log("GLB Loaded successfully.");
+            var root = result.meshes[0];
+            if (!root.scaling) root.scaling = new BABYLON.Vector3(1, 1, 1);
+
+            // FORCE VISIBILITY: Scale Up
+            root.scaling = new BABYLON.Vector3(3.3, 3.3, 3.3);
+
+            // 1. Initial Position (Flying high)
+            var y = this.getHeightAt ? this.getHeightAt(x, z) : 10;
+            root.position = new BABYLON.Vector3(x, y + 6.0, z); // 6 units above ground (Nap of the earth)
+
+            // MATERIAL FIX: Reverted to original GLB materials
+            // Note: If invisible again, the GLB materials are broken.
+
+            // 2. Find Rotors
+            var mainRotor = null;
+            var tailRotor = null;
+
+            var allNodes = result.transformNodes.concat(result.meshes);
+            allNodes.forEach(n => {
+                // Fix Rotation Locks if any
+                if (n.rotationQuaternion) {
+                    n.rotation = n.rotationQuaternion.toEulerAngles();
+                    n.rotationQuaternion = null;
+                }
+
+                if (n.name.includes("RotorHub")) mainRotor = n;
+                if (n.name.includes("TailRotorShaft")) tailRotor = n;
+            });
+
+            console.log("HELICOPTER DEPLOYED. Main: " + (mainRotor ? "OK" : "MISSING") + " Tail: " + (tailRotor ? "OK" : "MISSING"));
+
+            // 3. Add to Airforce
+            if (!this.helis) this.helis = [];
+            this.helis.push({
+                root: root,
+                mainRotor: mainRotor,
+                tailRotor: tailRotor,
+                speed: 15.0,             // Fast
+                dir: new BABYLON.Vector3(0, 0, 1),
+                targetIndex: Math.floor(Math.random() * (this.ruins ? this.ruins.length : 1)),
+                tilt: 0
+            });
+        }).catch((err) => {
+            console.error("FAILED TO LOAD HELICOPTER GLB: ", err);
+        });
+    },
+
+    updateHelicopter: function (dt) {
+        if (!this.helis) return;
+
+        // Lazy Init Patrol Points: Combine Camps
+        if (!this.patrolPoints) {
+            this.patrolPoints = [];
+            if (this.survivorCamps) this.patrolPoints = this.patrolPoints.concat(this.survivorCamps);
+            if (this.banditCamps) this.patrolPoints = this.patrolPoints.concat(this.banditCamps);
+            // Fallback to Ruins if no camps
+            if (this.patrolPoints.length === 0 && this.ruins) this.patrolPoints = this.ruins;
+        }
+
+        for (var i = this.helis.length - 1; i >= 0; i--) {
+            var h = this.helis[i];
+
+            if (!h.root || h.root.isDisposed()) {
+                this.helis.splice(i, 1);
+                continue;
+            }
+
+            // --- FLIGHT PHYSICS ---
+
+            // 1. Pathfinding (Patrol Camps)
+            if (this.patrolPoints && this.patrolPoints.length > 0) {
+                // Ensure index checks out
+                if (h.targetIndex >= this.patrolPoints.length) h.targetIndex = 0;
+
+                var target = this.patrolPoints[h.targetIndex];
+                var dx = target.position.x - h.root.position.x;
+                var dz = target.position.z - h.root.position.z;
+                var dist = Math.sqrt(dx * dx + dz * dz);
+
+                if (dist < 40.0) { // Waypoint reached (Large radius)
+                    h.targetIndex = (h.targetIndex + 1) % this.patrolPoints.length;
+                } else {
+                    var desiredDir = new BABYLON.Vector3(dx, 0, dz).normalize();
+                    h.dir = BABYLON.Vector3.Lerp(h.dir, desiredDir, 1.0 * dt); // Slower turn rate for heli
+                }
+            } else {
+                // Just fly straight if no targets
+                h.dir = new BABYLON.Vector3(0, 0, 1);
+            }
+
+            // 2. Move
+            var velocity = h.dir.scale(h.speed * dt);
+            h.root.position.addInPlace(velocity);
+
+            // 3. Terrain Following (High Altitude)
+            var groundY = this.getHeightAt(h.root.position.x, h.root.position.z);
+            var desiredY = groundY + 6.0;
+            // Smooth altitude change
+            h.root.position.y = BABYLON.Scalar.Lerp(h.root.position.y, desiredY, 2.0 * dt);
+
+            // 4. Orientation
+            var targetAngle = Math.atan2(h.dir.x, h.dir.z);
+            h.root.rotation.y = targetAngle;
+
+            // Bank Angle (Roll based on turn)
+            // Just a simple fake bank for visual flair
+            h.root.rotation.z = Math.sin(Date.now() * 0.001) * 0.05; // Gentle sway
+
+            // Nose pitch down slightly when moving fast
+            h.root.rotation.x = 0.2;
+
+            // --- ANIMATION ---
+            // Spin Rotors
+            var rotorSpeed = 15.0; // Radians per frame approx
+            if (h.mainRotor) h.mainRotor.rotation.y += rotorSpeed * dt * 20.0;
+            if (h.tailRotor) h.tailRotor.rotation.x += rotorSpeed * dt * 20.0; // Tail rotor usually spins on X or Z depending on modeling
+        }
+    },
+
 
     // --- BOSS SYSTEM (The War Rig) ---
     createBossTanker: function (scene, x, z) {
@@ -1902,6 +2046,173 @@ var wastelandRenderer = {
                 s.limbs.ra.rotation.x *= 0.9;
                 s.limbs.ll.rotation.x *= 0.9;
                 s.limbs.rl.rotation.x *= 0.9;
+            }
+        }
+    },
+
+    // --- Hero Mode Logic ---
+
+    toggleVehicle: async function () {
+        if (this.isDriving) {
+            // Exit Vehicle
+            console.log("Exiting Vehicle...");
+            this.isDriving = false;
+
+            // 1. Get Car Position
+            let carPos = this.chassis.position.clone();
+            carPos.x += 2.0; // Hop out to the side
+
+            // Raycast closest ground at exit point
+            // Use Robust Height Check
+            let groundY = this.getHeightAt(carPos.x, carPos.z);
+            carPos.y = groundY + 0.9;
+
+            // 2. Load Hero Mesh
+            if (!this.heroMesh) {
+                try {
+                    // Try to load the baked GLB
+                    console.log("Loading WastelandHero.glb...");
+                    let result = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "WastelandHero.glb", this.scene);
+                    this.heroMesh = result.meshes[0];
+
+                    // Fix Hero scale and rotation
+                    this.heroMesh.scaling = new BABYLON.Vector3(1.0, 1.0, 1.0);
+                    this.heroMesh.rotationQuaternion = null;
+                    this.heroMesh.rotation = BABYLON.Vector3.Zero();
+
+                    // Ensure materials are visible
+                    // Ensure materials are visible & Cache Limbs
+                    this.heroLimbs = {};
+                    let allNodes = result.transformNodes.concat(result.meshes);
+
+                    allNodes.forEach(m => {
+                        m.checkCollisions = false;
+                        m.isPickable = false;
+
+                        // Fix Rotation Quaternions for animation
+                        if (m.rotationQuaternion) {
+                            m.rotation = m.rotationQuaternion.toEulerAngles();
+                            m.rotationQuaternion = null;
+                        }
+
+                        // Cache Limbs
+                        if (m.name.includes("leg_l_upper")) this.heroLimbs.legL = m;
+                        if (m.name.includes("leg_r_upper")) this.heroLimbs.legR = m;
+                        if (m.name.includes("arm_l_shoulder")) this.heroLimbs.armL = m;
+                        if (m.name.includes("arm_r_shoulder")) this.heroLimbs.armR = m;
+                    });
+
+                    console.log("Hero Loaded. Limbs: " + Object.keys(this.heroLimbs).length);
+
+                    console.log("Hero Loaded");
+                } catch (e) {
+                    console.warn("WastelandHero.glb not found, using generic box.", e);
+                    this.heroMesh = BABYLON.MeshBuilder.CreateBox("GenericHero", { height: 1.8, width: 0.5, depth: 0.25 }, this.scene);
+                }
+            }
+
+            this.heroMesh.position = carPos;
+            this.heroMesh.rotation = BABYLON.Vector3.Zero();
+            this.heroMesh.setEnabled(true);
+
+            // 3. Switch Camera
+
+
+            // 3. Update Camera Target
+            this.camera.lockedTarget = this.heroMesh;
+            this.camera.radius = 10;
+            this.camera.beta = Math.PI / 3;
+
+        } else {
+            // Enter Vehicle
+            if (!this.heroMesh) return;
+
+            // Check distance to car
+            let dist = BABYLON.Vector3.Distance(this.heroMesh.position, this.chassis.position);
+            if (dist < 8.0) { // Generous range
+                console.log("Entering Vehicle...");
+                this.isDriving = true;
+
+                // 1. Hide Hero
+                this.heroMesh.setEnabled(false);
+
+                // 2. Update Camera Target
+                this.camera.lockedTarget = this.vehicle;
+                this.camera.radius = 30;
+                this.camera.beta = Math.PI / 3;
+            } else {
+                console.log("Too far from vehicle! Distance: " + dist.toFixed(1));
+            }
+        }
+    },
+
+    updateHero: function (dt) {
+        if (!this.heroMesh || this.isDriving || !this.heroMesh.isEnabled()) return;
+
+        let speed = 8.0 * dt; // Run speed
+        let moveVector = BABYLON.Vector3.Zero();
+
+        // Simple WASD relative to Camera
+        var forward = this.camera.getForwardRay().direction;
+        var right = this.camera.getDirection(BABYLON.Vector3.Right());
+
+        // Flatten to ground plane
+        forward.y = 0; forward.normalize();
+        right.y = 0; right.normalize();
+
+        if (this.inputMap["w"]) moveVector.addInPlace(forward);
+        if (this.inputMap["s"]) moveVector.subtractInPlace(forward);
+        if (this.inputMap["d"]) moveVector.addInPlace(right);
+        if (this.inputMap["a"]) moveVector.subtractInPlace(right);
+
+        if (moveVector.length() > 0) {
+            moveVector.normalize().scaleInPlace(speed);
+            this.heroMesh.position.addInPlace(moveVector);
+
+            // Rotate hero to face movement (Smooth lerp)
+            let targetAngle = Math.atan2(moveVector.x, moveVector.z);
+            let currentAngle = this.heroMesh.rotation.y;
+
+            // Shortest path angle interpolation
+            let diff = targetAngle - currentAngle;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+
+            this.heroMesh.rotation.y += diff * 10.0 * dt;
+
+            // --- ANIMATION CHECK ---
+            if (this.heroLimbs) {
+                // Walk Cycle
+                this.heroBob = (this.heroBob || 0) + dt * 15;
+                let sin = Math.sin(this.heroBob);
+
+                // Legs (Scissor)
+                if (this.heroLimbs.legL) this.heroLimbs.legL.rotation.x = sin * 0.8;
+                if (this.heroLimbs.legR) this.heroLimbs.legR.rotation.x = -sin * 0.8;
+
+                // Arms (Opposite to legs)
+                if (this.heroLimbs.armL) this.heroLimbs.armL.rotation.x = -sin * 0.6;
+                if (this.heroLimbs.armR) this.heroLimbs.armR.rotation.x = sin * 0.6;
+            }
+
+            // Simple Bobbing Animation (Walking)
+            let bobHeight = Math.sin((this.heroBob || 0) * 2) * 0.05; // Bob twice per cycle
+
+            // Ground snapping
+            let groundY = this.getHeightAt(this.heroMesh.position.x, this.heroMesh.position.z);
+            this.heroMesh.position.y = groundY + 0.9 + bobHeight;
+
+        } else {
+            // Idle Logic (Snap to ground)
+            let groundY = this.getHeightAt(this.heroMesh.position.x, this.heroMesh.position.z);
+            this.heroMesh.position.y = groundY + 0.9;
+
+            // Reset Animation
+            if (this.heroLimbs) {
+                if (this.heroLimbs.legL) this.heroLimbs.legL.rotation.x = BABYLON.Scalar.Lerp(this.heroLimbs.legL.rotation.x, 0, 10 * dt);
+                if (this.heroLimbs.legR) this.heroLimbs.legR.rotation.x = BABYLON.Scalar.Lerp(this.heroLimbs.legR.rotation.x, 0, 10 * dt);
+                if (this.heroLimbs.armL) this.heroLimbs.armL.rotation.x = BABYLON.Scalar.Lerp(this.heroLimbs.armL.rotation.x, 0, 10 * dt);
+                if (this.heroLimbs.armR) this.heroLimbs.armR.rotation.x = BABYLON.Scalar.Lerp(this.heroLimbs.armR.rotation.x, 0, 10 * dt);
             }
         }
     }
