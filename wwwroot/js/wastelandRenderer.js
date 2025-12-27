@@ -65,6 +65,12 @@ var wastelandRenderer = {
                 if (key === "@" || key === "2") WastelandNPCs.spawnHelicopter(this.scene, p.position.x, p.position.z, this);
                 if (key === "#" || key === "3") WastelandNPCs.spawnNuclearHydra(this.scene, p.position.x, p.position.z, this);
             }
+
+            // Boss Tanker (Z)
+            if (key === "z") {
+                var p = this.vehicle ? this.vehicle : { position: new BABYLON.Vector3(0, 0, 0), rotationQuaternion: new BABYLON.Quaternion() };
+                WastelandNPCs.createBossTanker(this.scene, p.position.x, p.position.z, this);
+            }
         }));
         this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, (evt) => {
             var key = evt.sourceEvent.key.toLowerCase();
@@ -163,7 +169,7 @@ var wastelandRenderer = {
         this.rightGun.parent = this.chassis;
 
         // 3. Load Visuals
-        BABYLON.SceneLoader.ImportMeshAsync("", "WastelandRaider.glb", "", scene).then((result) => {
+        BABYLON.SceneLoader.ImportMeshAsync("", "WastelandRaiderMax.glb", "", scene).then((result) => {
             var root = result.meshes[0];
             root.parent = this.vehicle;
             var allNodes = result.transformNodes.concat(result.meshes);
