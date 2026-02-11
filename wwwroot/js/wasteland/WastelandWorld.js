@@ -132,7 +132,7 @@ var WastelandWorld = {
         windowMat.diffuseColor = new BABYLON.Color3(0.1, 0.3, 0.5);
         windowMat.emissiveColor = new BABYLON.Color3(0.05, 0.1, 0.2);
         var scrapMat = new BABYLON.StandardMaterial("scrapRuinMat", scene);
-        scrapMat.diffuseTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/metal.png", scene);
+        scrapMat.diffuseTexture = new BABYLON.Texture("textures/metal.png", scene);
         scrapMat.diffuseColor = new BABYLON.Color3(0.3, 0.2, 0.1);
         var vaultMat = new BABYLON.StandardMaterial("vaultMat", scene);
         vaultMat.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.2);
@@ -210,7 +210,7 @@ var WastelandWorld = {
     createGasStations: function (scene, count) {
         this.gasStations = [];
         var mat = new BABYLON.StandardMaterial("gasMat", scene);
-        mat.diffuseTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/metal.png", scene);
+        mat.diffuseTexture = new BABYLON.Texture("textures/metal.png", scene);
         mat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.4);
         mat.diffuseTexture.uScale = 2;
         mat.diffuseTexture.vScale = 2;
@@ -261,7 +261,7 @@ var WastelandWorld = {
     createAbandonedCars: function (scene, count) {
         this.abandonedCars = [];
         var rustMat = new BABYLON.StandardMaterial("rustMat", scene);
-        rustMat.diffuseTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/metal.png", scene);
+        rustMat.diffuseTexture = new BABYLON.Texture("textures/metal.png", scene);
         rustMat.diffuseColor = new BABYLON.Color3(0.4, 0.2, 0.1);
         rustMat.diffuseTexture.uScale = 2;
         rustMat.diffuseTexture.vScale = 2;

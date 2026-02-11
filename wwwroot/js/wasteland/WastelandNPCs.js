@@ -55,7 +55,10 @@ var WastelandNPCs = {
                 segments: segments,
                 dir: new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
                 speed: 3.0 + Math.random(),
-                turnTimer: 0
+                turnTimer: 0,
+                hp: 25,
+                isFeral: false,
+                visualTimer: 0
             });
         }
     },
@@ -106,11 +109,15 @@ var WastelandNPCs = {
 
             this.coyotes.push({
                 root: root,
+                head: head,
                 legs: [f_l, f_r, b_l, b_r],
                 dir: new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
                 speed: 2.0,
                 animTime: Math.random() * 100,
-                stateTimer: 0
+                stateTimer: 0,
+                hp: 25,
+                isFeral: false,
+                visualTimer: 0
             });
         }
     },
@@ -288,14 +295,38 @@ var WastelandNPCs = {
     updateFauna: function (dt, core) {
         // Snakes
         this.snakes.forEach(s => {
-            s.turnTimer -= dt;
-            if (s.turnTimer <= 0) {
-                s.dir = new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
-                s.turnTimer = 2.0 + Math.random() * 3.0;
-            }
             var head = s.segments[0];
-            var move = s.dir.scale(s.speed * dt);
-            head.position.addInPlace(move);
+
+            if (s.isFeral && WastelandHero.mesh) {
+                // Chase Hero
+                var targetDir = WastelandHero.mesh.position.subtract(head.position);
+                targetDir.y = 0;
+                var dist = targetDir.length();
+                targetDir.normalize();
+
+                if (dist > 1.5) {
+                    s.dir = BABYLON.Vector3.Lerp(s.dir, targetDir, 5.0 * dt).normalize();
+                    var chaseMove = s.dir.scale(s.speed * dt);
+                    head.position.addInPlace(chaseMove);
+                }
+
+                // Strike Visual (Lunge)
+                if (s.visualTimer > 0) {
+                    s.visualTimer -= dt * 5;
+                    var b = Math.sin(s.visualTimer * Math.PI);
+                    head.scaling.setAll(1.0 + b * 0.4);
+                } else {
+                    head.scaling.setAll(1.0);
+                }
+            } else {
+                s.turnTimer -= dt;
+                if (s.turnTimer <= 0) {
+                    s.dir = new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+                    s.turnTimer = 2.0 + Math.random() * 3.0;
+                }
+                var normalMove = s.dir.scale(s.speed * dt);
+                head.position.addInPlace(normalMove);
+            }
             head.position.y = core.getHeightFast(head.position.x, head.position.z) + 0.2;
             head.rotation.y = Math.atan2(s.dir.x, s.dir.z);
 
@@ -317,15 +348,40 @@ var WastelandNPCs = {
 
         // Coyotes
         this.coyotes.forEach(c => {
-            c.stateTimer -= dt;
-            if (c.stateTimer <= 0) {
-                c.dir = new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
-                c.stateTimer = 4.0 + Math.random() * 4.0;
+            if (c.isFeral && WastelandHero.mesh) {
+                // Chase Hero
+                var targetDir = WastelandHero.mesh.position.subtract(c.root.position);
+                targetDir.y = 0;
+                var dist = targetDir.length();
+                targetDir.normalize();
+
+                if (dist > 2.5) {
+                    c.dir = BABYLON.Vector3.Lerp(c.dir, targetDir, 5.0 * dt).normalize();
+                    c.root.position.addInPlace(c.dir.scale(4.0 * dt));
+                }
+            } else {
+                c.stateTimer -= dt;
+                if (c.stateTimer <= 0) {
+                    c.dir = new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+                    c.stateTimer = 4.0 + Math.random() * 4.0;
+                }
+                c.root.position.addInPlace(c.dir.scale(4.0 * dt));
             }
-            c.root.position.addInPlace(c.dir.scale(4.0 * dt));
+
             c.root.position.y = core.getHeightFast(c.root.position.x, c.root.position.z) + 0.5;
             var angle = Math.atan2(c.dir.x, c.dir.z);
             c.root.rotation.y = BABYLON.Scalar.Lerp(c.root.rotation.y, angle, 5.0 * dt);
+
+            // Coyote Lunge Visual (Only Head)
+            if (c.visualTimer > 0) {
+                c.visualTimer -= dt * 5;
+                var b = Math.sin(c.visualTimer * Math.PI);
+                c.head.position.z = 0.6 + (b * 0.4); // Pokes head forward
+                c.head.scaling.setAll(1.0 + (b * 0.2));
+            } else {
+                c.head.position.z = 0.6;
+                c.head.scaling.setAll(1.0);
+            }
 
             c.animTime += dt * 10.0;
             var amp = 0.5;

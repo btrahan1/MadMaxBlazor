@@ -81,6 +81,47 @@ var wastelandRenderer = {
             this.update();
             this.scene.render();
         });
+
+        // Double-Click Combat Engagement
+        this.scene.onPointerObservable.add((pointerInfo) => {
+            if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOUBLETAP) {
+                var pickResult = pointerInfo.pickInfo;
+                if (pickResult.hit && WastelandHero.isActive) {
+                    var mesh = pickResult.pickedMesh;
+                    console.log("Double Click on: " + mesh.name);
+
+                    // Identify if it's wildlife
+                    var targetNPC = null;
+
+                    // Check Coyotes
+                    for (var c of WastelandNPCs.coyotes) {
+                        // Check if picked mesh is part of coyote root/descendants
+                        if (mesh === c.root || mesh.isDescendantOf(c.root)) {
+                            targetNPC = c;
+                            break;
+                        }
+                    }
+
+                    // Check Snakes
+                    if (!targetNPC) {
+                        for (var s of WastelandNPCs.snakes) {
+                            if (s.segments.includes(mesh)) {
+                                targetNPC = s;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (targetNPC) {
+                        console.log("COMBAT ENGAGED!");
+                        targetNPC.isFeral = true;
+                        WastelandHero.combatTarget = targetNPC;
+                        WastelandHero.combatTurn = 0; // Reset turn to Hero
+                        WastelandHero.combatTimer = 0.5; // Quick first strike
+                    }
+                }
+            }
+        });
     },
 
     createScene: function () {
@@ -105,6 +146,7 @@ var wastelandRenderer = {
         // Systems
         this.initRadar(scene);
         WastelandCombat.init(scene);
+        WastelandCombatUI.init(scene);
 
         // Terrain & Props
         WastelandWorld.init(scene);

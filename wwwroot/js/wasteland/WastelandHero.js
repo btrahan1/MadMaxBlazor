@@ -1,8 +1,13 @@
 var WastelandHero = {
-    isActive: false, // Replaces isDriving logic (isActive = NOT driving)
+    isActive: false,
     mesh: null,
     limbs: {},
+    hp: 100,
+    combatTarget: null,
+    combatTurn: 0, // 0: Hero, 1: NPC
+    combatTimer: 0,
     animTimer: 0,
+    swingTimer: 0,
 
     // Core references passed on demand or stored?
     // Passing 'core' to update/toggle is cleaner for context.
@@ -93,34 +98,113 @@ var WastelandHero = {
     update: function (dt, core) {
         if (!this.isActive || !this.mesh || !this.mesh.isEnabled()) return;
 
-        var speed = 15.0 * dt; // Match previous speed tweak (15 * dt)
+        // Death Check
+        if (this.hp <= 0) {
+            console.log("HERO IS DEAD!");
+            WastelandCombatUI.removeHealthBar(this.mesh);
+            this.mesh.rotation.z = Math.PI / 2; // Lie down
+            return;
+        }
+
+        // --- COMBAT LOOP ---
+        if (this.combatTarget) {
+            var targetMesh = this.combatTarget.root || this.combatTarget.segments[0];
+            var dist = BABYLON.Vector3.Distance(this.mesh.position, targetMesh.position);
+
+            // Face Target
+            var diff = targetMesh.position.subtract(this.mesh.position);
+            this.mesh.rotation.y = Math.atan2(diff.x, diff.z);
+
+            if (dist < 4.0) {
+                this.combatTimer -= dt;
+
+                // Combat Visuals (Swing)
+                if (this.swingTimer > 0) {
+                    this.swingTimer -= dt * 5;
+                    var swingScale = Math.sin(this.swingTimer * Math.PI);
+                    if (this.limbs.armR) this.limbs.armR.rotation.x = -1.5 * swingScale;
+                    if (this.limbs.armL) this.limbs.armL.rotation.x = -0.5 * swingScale;
+                }
+
+                if (this.combatTimer <= 0) {
+                    this.combatTimer = 2.0; // Wait 2s for next turn
+
+                    if (this.combatTurn === 0) {
+                        // Hero Turn
+                        this.swingTimer = 1.0;
+                        var heroDmg = 5 + Math.floor(Math.random() * 6); // 5-10
+                        this.combatTarget.hp -= heroDmg;
+                        console.log("Hero swings for " + heroDmg + "! (Target HP: " + this.combatTarget.hp + ")");
+
+                        // UI: Damage Number & Health Bar
+                        WastelandCombatUI.showDamage(targetMesh, heroDmg);
+                        WastelandCombatUI.updateHealthBar(targetMesh, (this.combatTarget.hp / 25) * 100);
+
+                        this.combatTurn = 1;
+                    } else {
+                        // NPC Turn
+                        var npcDmg = 3 + Math.floor(Math.random() * 4); // 3-6
+                        this.hp -= npcDmg;
+                        console.log("NPC attacks for " + npcDmg + "! (Hero HP: " + this.hp + ")");
+
+                        // UI: Damage Number & Health Bar
+                        WastelandCombatUI.showDamage(this.mesh, npcDmg);
+                        WastelandCombatUI.updateHealthBar(this.mesh, this.hp); // Hero max is 100
+
+                        // Signal NPC to lunge
+                        this.combatTarget.visualTimer = 1.0;
+
+                        this.combatTurn = 0;
+                    }
+
+                    // HUD Update
+                    if (window.updateHud) {
+                        window.updateHud(0, Math.round(dist * 10), this.mesh.rotation.y, this.hp, core.scrap);
+                    }
+
+                    // Check NPC Death
+                    if (this.combatTarget.hp <= 0) {
+                        console.log("TARGET DESTROYED!");
+                        WastelandCombatUI.removeHealthBar(targetMesh);
+                        if (this.combatTarget.root) {
+                            this.combatTarget.root.dispose();
+                            WastelandNPCs.coyotes = WastelandNPCs.coyotes.filter(c => c !== this.combatTarget);
+                        } else {
+                            this.combatTarget.segments.forEach(s => s.dispose());
+                            WastelandNPCs.snakes = WastelandNPCs.snakes.filter(s => s !== this.combatTarget);
+                        }
+                        this.combatTarget = null;
+                    }
+                }
+            } else if (dist > 15.0) {
+                // Break Combat if too far
+                WastelandCombatUI.removeHealthBar(targetMesh);
+                WastelandCombatUI.removeHealthBar(this.mesh);
+                this.combatTarget.isFeral = false;
+                this.combatTarget = null;
+            }
+        }
+
+        // Tank Style Controls
         var moveVector = BABYLON.Vector3.Zero();
+        var turnSpeed = 3.0 * dt;
+        var moveSpeed = 15.0 * dt;
 
-        // Cam Relative Input
-        var forward = core.camera.getForwardRay().direction;
-        var right = core.camera.getDirection(BABYLON.Vector3.Right());
+        // Rotation (A/D) - Only if not auto-facing for combat
+        if (!this.combatTarget) {
+            if (core.inputMap["a"]) this.mesh.rotation.y -= turnSpeed;
+            if (core.inputMap["d"]) this.mesh.rotation.y += turnSpeed;
+        }
 
-        forward.y = 0; forward.normalize();
-        right.y = 0; right.normalize();
+        // Movement (W/S) - Relative to orientation
+        var forwardDir = new BABYLON.Vector3(Math.sin(this.mesh.rotation.y), 0, Math.cos(this.mesh.rotation.y));
 
-        if (core.inputMap["w"]) moveVector.addInPlace(forward);
-        if (core.inputMap["s"]) moveVector.subtractInPlace(forward);
-        if (core.inputMap["d"]) moveVector.addInPlace(right);
-        if (core.inputMap["a"]) moveVector.subtractInPlace(right);
+        if (core.inputMap["w"]) moveVector.addInPlace(forwardDir);
+        if (core.inputMap["s"]) moveVector.subtractInPlace(forwardDir);
 
         if (moveVector.length() > 0) {
-            moveVector.normalize().scaleInPlace(speed);
+            moveVector.normalize().scaleInPlace(moveSpeed);
             this.mesh.position.addInPlace(moveVector);
-
-            // Rotation
-            var targetAngle = Math.atan2(moveVector.x, moveVector.z);
-            var currentAngle = this.mesh.rotation.y;
-
-            // Lerp Angle
-            var diff = targetAngle - currentAngle;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            this.mesh.rotation.y += diff * 10.0 * dt;
 
             // Animation
             this.animTimer += dt * 15;
