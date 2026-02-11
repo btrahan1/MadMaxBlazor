@@ -13,8 +13,15 @@
             <h2 class="splash-subtitle">THE WASTELANDS</h2>
             
             <div class="splash-menu">
-                <button class="menu-btn primary" @onclick="StartSinglePlayer">SINGLE PLAYER</button>
-                <button class="menu-btn secondary" @onclick="StartMultiplayer">MULTIPLAYER</button>
+                @if (HasSave)
+                {
+                    <button class="menu-btn primary" @onclick="ContinueGame">CONTINUE</button>
+                    <button class="menu-btn secondary" @onclick="StartNewGame">NEW GAME</button>
+                }
+                else
+                {
+                    <button class="menu-btn primary" @onclick="StartNewGame">START SURVIVAL</button>
+                }
             </div>
             
             <div class="splash-footer">
@@ -56,7 +63,90 @@
             <span class="fuel-label">FUEL</span>
         </div>
     </div>
+
+    @if (ShowPaperdoll)
+    {
+        <div class="paperdoll-overlay">
+            <div class="paperdoll-window">
+                <div class="paperdoll-header">
+                    <h2>CHARACTER</h2>
+                    <button class="close-btn" @onclick="TogglePaperdoll">×</button>
+                </div>
+                
+                <div class="paperdoll-content">
+                    <div class="stats-card">
+                        <h3>LEVEL @State.Level</h3>
+                        <div class="xp-bar-container">
+                             @{ var xpPct = (double)State.XP / State.GetXPToNextLevel() * 100; }
+                            <div class="xp-bar" style="width: @(Math.Min(100, xpPct))%;"></div>
+                        </div>
+                        <p class="xp-text">XP: @State.XP / @State.GetXPToNextLevel()</p>
+                        
+                        <div class="stat-points">
+                            @if (State.StatPoints > 0)
+                            {
+                                <span class="points-glow">POINTS AVAILABLE: @State.StatPoints</span>
+                            }
+                        </div>
+
+                        <div class="stats-list">
+                            @renderStat("STR", State.Strength)
+                            @renderStat("DEX", State.Dexterity)
+                            @renderStat("CON", State.Constitution)
+                            @renderStat("INT", State.Intelligence)
+                            @renderStat("WIS", State.Wisdom)
+                            @renderStat("CHA", State.Charisma)
+                        </div>
+                    </div>
+
+                    <div class="inventory-card">
+                        <h3>INVENTORY</h3>
+                        <div class="inv-grid">
+                            <div class="inv-slot gear">HEAD</div>
+                            <div class="inv-slot gear">CHEST</div>
+                            <div class="inv-slot gear">LEGS</div>
+                            <div class="inv-slot gear">MAIN</div>
+                            <div class="inv-slot gear">OFF</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (ShowLevelUp)
+    {
+        <div class="level-up-popup">
+            <h1>LEVEL UP!</h1>
+            <p>CONGRATULATIONS, SURVIVOR!</p>
+            <p style="color: gold;">+2 STAT POINTS AWARDED</p>
+        </div>
+    }
+
+    @if (State.IsDead)
+    {
+        <div class="death-overlay">
+            <div class="death-content">
+                <h1 class="death-title">YOU DIED</h1>
+                <p>The Wasteland claims another soul...</p>
+                <button class="revive-btn" @onclick="HandleRevive">REVIVE</button>
+            </div>
+        </div>
+    }
 </div>
+
+@code {
+    RenderFragment renderStat(string name, int val) => __builder => {
+        <div class="stat-row">
+            <span class="stat-name">@name</span>
+            <span class="stat-val">@val</span>
+            @if (State.StatPoints > 0)
+            {
+                <button class="plus-btn" @onclick='() => AllocatePoint(name)'>+</button>
+            }
+        </div>
+    };
+}
 
 <script>
     window.updateHud = (speed, dist, hdgRad, fuel, scrap) => {
@@ -278,18 +368,223 @@
         color: #888;
         font-family: sans-serif;
     }
+
+    /* Paperdoll Styles */
+    .paperdoll-overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 200;
+        backdrop-filter: blur(8px);
+    }
+    .paperdoll-window {
+        width: 600px;
+        background: #1a1a1a;
+        border: 3px solid #ffcc00;
+        box-shadow: 0 0 30px rgba(255, 204, 0, 0.3);
+        padding: 20px;
+        color: white;
+        font-family: 'Courier New', monospace;
+    }
+    .paperdoll-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #333;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+    }
+    .paperdoll-header h2 { margin: 0; color: #ffcc00; letter-spacing: 5px; }
+    .close-btn { 
+        background: none; border: none; color: #555; font-size: 32px; cursor: pointer;
+    }
+    .close-btn:hover { color: #ffcc00; }
+    .paperdoll-content { display: flex; gap: 20px; }
+    .stats-card, .inventory-card { flex: 1; background: #222; padding: 15px; border: 1px solid #333; }
+    
+    .xp-bar-container { width: 100%; height: 10px; background: #000; margin: 10px 0; border: 1px solid #444; }
+    .xp-bar { height: 100%; background: #00ccff; }
+    .xp-text { font-size: 12px; color: #888; margin-bottom: 15px; }
+    
+    .stat-row { 
+        display: flex; align-items: center; margin-bottom: 10px; font-size: 18px; 
+    }
+    .stat-name { width: 50px; color: #aaa; }
+    .stat-val { width: 40px; font-weight: bold; }
+    .plus-btn { 
+        padding: 2px 8px; background: #ffcc00; border: none; font-weight: bold; cursor: pointer;
+        border-radius: 2px;
+    }
+    .plus-btn:hover { background: #fff; }
+    .points-glow { color: #00ccff; font-weight: bold; text-shadow: 0 0 10px #00ccff; display: block; margin-bottom: 15px; }
+
+    .inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .inv-slot { 
+        height: 60px; background: #111; border: 1px dashed #444; 
+        display: flex; justify-content: center; align-items: center; font-size: 10px; color: #444;
+    }
+    .inv-slot.gear { border-style: solid; color: #666; }
+
+    /* Level Up Popup */
+    .level-up-popup {
+        position: absolute;
+        top: 30%; left: 50%; transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.9);
+        border: 4px solid gold;
+        padding: 40px;
+        text-align: center;
+        z-index: 300;
+        animation: popupIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @@keyframes popupIn {
+        from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    /* Death Overlay */
+    .death-overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(139, 0, 0, 0.4);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 500;
+        backdrop-filter: grayscale(1) blur(10px);
+        animation: fadeIn 2s forwards;
+    }
+    .death-content {
+        text-align: center;
+        color: white;
+        font-family: 'Courier New', monospace;
+    }
+    .death-title {
+        font-size: 80px;
+        color: #ff3300;
+        text-shadow: 0 0 20px #000;
+        margin-bottom: 20px;
+        letter-spacing: 15px;
+    }
+    .revive-btn {
+        padding: 15px 40px;
+        font-size: 24px;
+        background: #000;
+        color: #ff3300;
+        border: 3px solid #ff3300;
+        cursor: pointer;
+        transition: all 0.3s;
+        letter-spacing: 5px;
+    }
+    .revive-btn:hover {
+        background: #ff3300;
+        color: #000;
+        box-shadow: 0 0 30px #ff3300;
+    }
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
 </style>
 
 @code {
     private DotNetObjectReference<Home>? objRef;
     private bool ShowSplash { get; set; } = true;
-    
+    private bool ShowPaperdoll { get; set; } = false;
+    private bool ShowLevelUp { get; set; } = false;
+    private bool HasSave { get; set; } = false;
+
     [Inject] MadMaxBlazor.Services.GameState State { get; set; } = default!;
+    [Inject] MadMaxBlazor.Services.PersistenceService Persistence { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.OnChange += StateHasChanged;
+        State.OnLevelUp += HandleLevelUp;
+        
+        var savedState = await Persistence.LoadGame();
+        if (savedState != null)
+        {
+            HasSave = true;
+        }
+    }
+
+    private async void HandleLevelUp()
+    {
+        ShowLevelUp = true;
+        StateHasChanged();
+        await Task.Delay(4000);
+        ShowLevelUp = false;
+        StateHasChanged();
+    }
+
+    private void TogglePaperdoll()
+    {
+        ShowPaperdoll = !ShowPaperdoll;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void TogglePaperdollFromJS()
+    {
+        TogglePaperdoll();
+    }
+
+    private async void AllocatePoint(string stat)
+    {
+        if (State.StatPoints <= 0) return;
+        
+        switch(stat)
+        {
+            case "STR": State.Strength++; break;
+            case "DEX": State.Dexterity++; break;
+            case "CON": State.Constitution++; break;
+            case "INT": State.Intelligence++; break;
+            case "WIS": State.Wisdom++; break;
+            case "CHA": State.Charisma++; break;
+        }
+        State.StatPoints--;
+        await Persistence.SaveGame(State);
+        StateHasChanged();
+    }
+
+    private async void HandleRevive()
+    {
+        State.Revive();
+        await JSRuntime.InvokeVoidAsync("wastelandRenderer.respawnPlayer");
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task NotifyDeath()
+    {
+        State.UpdateHealth(0);
+        await Persistence.SaveGame(State);
+        StateHasChanged();
+    }
+
+    private async Task ContinueGame()
+    {
+        var savedState = await Persistence.LoadGame();
+        if (savedState != null)
+        {
+            State.LoadFrom(savedState);
+        }
+        ShowSplash = false;
+    }
+
+    private async Task StartNewGame()
+    {
+        await Persistence.ClearSave();
+        State.Reset();
+        ShowSplash = false;
+    }
 
     private void StartSinglePlayer()
     {
         ShowSplash = false;
-        // Optionally invoke JS to focus canvas
     }
 
     private void StartMultiplayer()
@@ -307,16 +602,22 @@
     }
 
     [JSInvokable]
+    public async Task AddExperience(int amount)
+    {
+        State.AddXP(amount);
+        await Persistence.SaveGame(State);
+    }
+
+    [JSInvokable]
     public void AddScrap(int amount)
     {
         State.AddScrap(amount);
-        // Direct UI update via JS for speed, or let Blazor re-render? 
-        // For 60fps game loops, JS updating DOM is smoother.
-        // We will push State back to JS if needed, but for now JS drives the UI.
     }
 
     public void Dispose()
     {
+        State.OnChange -= StateHasChanged;
+        State.OnLevelUp -= HandleLevelUp;
         objRef?.Dispose();
     }
 }

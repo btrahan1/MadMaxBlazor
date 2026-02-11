@@ -53,6 +53,13 @@ var wastelandRenderer = {
                 WastelandHero.toggleMode(this);
             }
 
+            // Paperdoll (ESC)
+            if (key === "escape") {
+                if (this.dotNetRef) {
+                    this.dotNetRef.invokeMethodAsync("TogglePaperdollFromJS");
+                }
+            }
+
             // Debug Spawning (Shift + 1/2)
             if (evt.sourceEvent.shiftKey) {
                 var now = Date.now();
@@ -488,4 +495,33 @@ var wastelandRenderer = {
 
     // toggleVehicle moved to WastelandHero.js
     // updateHero moved to WastelandHero.js
+    respawnPlayer: function () {
+        // 1. Move Vehicle to Random Point
+        var rx = (Math.random() * 800) - 400;
+        var rz = (Math.random() * 800) - 400;
+        var ry = this.getHeightAt(rx, rz) + 2;
+
+        if (this.vehicle) {
+            this.vehicle.position = new BABYLON.Vector3(rx, ry, rz);
+            this.velocity = new BABYLON.Vector3(0, 0, 0);
+            this.speed = 0;
+        }
+
+        // 2. Revive Hero
+        WastelandHero.revive(this);
+
+        // 3. Force Drive Mode
+        this.isDriving = false; // Set to false so toggleMode switches TO driving
+        WastelandHero.toggleMode(this);
+
+        // 4. Reset Camera
+        if (this.camera && this.vehicle) {
+            this.camera.lockedTarget = this.vehicle;
+            this.camera.alpha = -Math.PI / 2;
+            this.camera.beta = Math.PI / 3;
+            this.camera.radius = 30;
+        }
+
+        console.log("Player Respawned at: " + rx + ", " + rz);
+    }
 };

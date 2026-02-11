@@ -12,113 +12,123 @@ var WastelandNPCs = {
     },
 
     // --- FAUNA (Snakes/Coyotes) ---
-    createSnakes: function (scene, count, core) {
-        var snakeMat = new BABYLON.StandardMaterial("snakeMat", scene);
-        snakeMat.diffuseColor = new BABYLON.Color3(0.5, 0.4, 0.2); // Sandy
-        var patternMat = new BABYLON.StandardMaterial("patternMat", scene);
-        patternMat.diffuseColor = new BABYLON.Color3(0.3, 0.2, 0.1); // Darker pattern
-        var eyeMat = new BABYLON.StandardMaterial("eyeMat", scene);
-        eyeMat.diffuseColor = BABYLON.Color3.Black();
+    snakeMat: null,
+    patternMat: null,
+    eyeMat: null,
+    furMat: null,
 
-        for (var i = 0; i < count; i++) {
-            var segments = [];
-            var range = (i < 2) ? 40 : 1000;
-            var headX = (Math.random() * range) - (range / 2);
-            var headZ = (Math.random() * range) - (range / 2);
+    spawnSnake: function (scene, core, customX, customZ) {
+        if (!this.snakeMat) {
+            this.snakeMat = new BABYLON.StandardMaterial("snakeMat", scene);
+            this.snakeMat.diffuseColor = new BABYLON.Color3(0.5, 0.4, 0.2);
+            this.patternMat = new BABYLON.StandardMaterial("patternMat", scene);
+            this.patternMat.diffuseColor = new BABYLON.Color3(0.3, 0.2, 0.1);
+            this.eyeMat = new BABYLON.StandardMaterial("eyeMat", scene);
+            this.eyeMat.diffuseColor = BABYLON.Color3.Black();
+        }
 
-            for (var j = 0; j < 12; j++) {
-                var diameter = 1.0;
-                if (j === 0) diameter = 1.0; // Head
-                else if (j === 1) diameter = 0.65; // Neck
-                else if (j > 8) diameter = 1.0 - ((j - 8) * 0.2); // Tapering tail
-                else diameter = 1.0 - (j * 0.02); // Body slimming
+        var x = (customX !== undefined) ? customX : (Math.random() * 1000) - 500;
+        var z = (customZ !== undefined) ? customZ : (Math.random() * 1000) - 500;
 
-                var s = BABYLON.MeshBuilder.CreateSphere("s" + i + "_" + j, { diameter: diameter, segments: 8 }, scene);
-                s.material = (j % 2 === 0) ? snakeMat : patternMat;
+        var segments = [];
+        for (var j = 0; j < 12; j++) {
+            var diameter = 1.0;
+            if (j === 1) diameter = 0.65;
+            else if (j > 8) diameter = 1.0 - ((j - 8) * 0.2);
+            else diameter = 1.0 - (j * 0.02);
 
-                if (j === 0) {
-                    s.scaling.z = 1.4; // Elongate head
-                    var eyeL = BABYLON.MeshBuilder.CreateSphere("eyeL", { diameter: 0.15 }, scene);
-                    eyeL.material = eyeMat;
-                    eyeL.position = new BABYLON.Vector3(-0.25 * diameter, 0.2 * diameter, 0.3 * diameter);
-                    eyeL.parent = s;
-                    var eyeR = eyeL.clone();
-                    eyeR.position.x = 0.25 * diameter;
-                    eyeR.parent = s;
-                }
+            var s = BABYLON.MeshBuilder.CreateSphere("snake_seg", { diameter: diameter, segments: 8 }, scene);
+            s.material = (j % 2 === 0) ? this.snakeMat : this.patternMat;
 
-                s.position = new BABYLON.Vector3(headX, 0, headZ + (j * 0.4));
-                segments.push(s);
+            if (j === 0) {
+                s.scaling.z = 1.4;
+                var eyeL = BABYLON.MeshBuilder.CreateSphere("eyeL", { diameter: 0.15 }, scene);
+                eyeL.material = this.eyeMat;
+                eyeL.position = new BABYLON.Vector3(-0.25 * diameter, 0.2 * diameter, 0.3 * diameter);
+                eyeL.parent = s;
+                var eyeR = eyeL.clone();
+                eyeR.position.x = 0.25 * diameter;
+                eyeR.parent = s;
             }
 
-            this.snakes.push({
-                segments: segments,
-                dir: new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
-                speed: 3.0 + Math.random(),
-                turnTimer: 0,
-                hp: 25,
-                isFeral: false,
-                visualTimer: 0
-            });
+            s.position = new BABYLON.Vector3(x, 0, z + (j * 0.4));
+            segments.push(s);
+        }
+
+        this.snakes.push({
+            segments: segments,
+            dir: new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
+            speed: 3.0 + Math.random(),
+            turnTimer: 0,
+            hp: 25,
+            isFeral: false,
+            visualTimer: 0
+        });
+    },
+
+    createSnakes: function (scene, count, core) {
+        for (var i = 0; i < count; i++) {
+            this.spawnSnake(scene, core);
         }
     },
 
+    spawnCoyote: function (scene, core, customX, customZ) {
+        if (!this.furMat) {
+            this.furMat = new BABYLON.StandardMaterial("furMat", scene);
+            this.furMat.diffuseColor = new BABYLON.Color3(0.5, 0.4, 0.3);
+        }
+
+        var x = (customX !== undefined) ? customX : (Math.random() * 1000) - 500;
+        var z = (customZ !== undefined) ? customZ : (Math.random() * 1000) - 500;
+
+        var root = new BABYLON.TransformNode("coyote", scene);
+        root.position = new BABYLON.Vector3(x, 0, z);
+
+        var body = BABYLON.MeshBuilder.CreateBox("body", { width: 0.5, height: 0.6, depth: 1.2 }, scene);
+        body.parent = root; body.position.y = 0.6; body.material = this.furMat;
+
+        var head = BABYLON.MeshBuilder.CreateBox("head", { width: 0.4, height: 0.4, depth: 0.5 }, scene);
+        head.parent = body; head.position = new BABYLON.Vector3(0, 0.4, 0.6); head.material = this.furMat;
+
+        var snout = BABYLON.MeshBuilder.CreateBox("snout", { width: 0.2, height: 0.2, depth: 0.3 }, scene);
+        snout.parent = head; snout.position.z = 0.3; snout.material = this.furMat;
+
+        var earL = BABYLON.MeshBuilder.CreatePolyhedron("earL", { type: 1, size: 0.1 }, scene);
+        earL.parent = head; earL.position = new BABYLON.Vector3(-0.15, 0.25, -0.1); earL.material = this.furMat;
+        var earR = earL.clone(); earR.parent = head; earR.position.x = 0.15;
+
+        var tail = BABYLON.MeshBuilder.CreateCylinder("tail", { diameterTop: 0.1, diameterBottom: 0.2, height: 0.8 }, scene);
+        tail.parent = body; tail.rotation.x = Math.PI / 4; tail.position = new BABYLON.Vector3(0, 0.1, -0.6); tail.material = this.furMat;
+
+        var createLeg = (name, dx, dz) => {
+            var leg = BABYLON.MeshBuilder.CreateBox(name, { width: 0.15, height: 0.6, depth: 0.15 }, scene);
+            leg.parent = body; leg.position = new BABYLON.Vector3(dx, -0.3, dz); leg.material = this.furMat;
+            leg.setPivotPoint(new BABYLON.Vector3(0, 0.3, 0));
+            return leg;
+        };
+
+        var legs = [
+            createLeg("LegFL", -0.2, 0.5), createLeg("LegFR", 0.2, 0.5),
+            createLeg("LegBL", -0.2, -0.5), createLeg("LegBR", 0.2, -0.5)
+        ];
+
+        this.coyotes.push({
+            root: root,
+            head: head,
+            legs: legs,
+            dir: new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
+            speed: 2.0,
+            animTime: Math.random() * 100,
+            stateTimer: 0,
+            hp: 25,
+            isFeral: false,
+            visualTimer: 0
+        });
+    },
+
     createCoyotes: function (scene, count, core) {
-        var furMat = new BABYLON.StandardMaterial("furMat", scene);
-        furMat.diffuseColor = new BABYLON.Color3(0.5, 0.4, 0.3);
-
         for (var i = 0; i < count; i++) {
-            var range = (i < 2) ? 50 : 1000;
-            var x = (Math.random() * range) - (range / 2);
-            var z = (Math.random() * range) - (range / 2);
-
-            var root = new BABYLON.TransformNode("coyote" + i, scene);
-            root.position = new BABYLON.Vector3(x, 0, z);
-
-            var body = BABYLON.MeshBuilder.CreateBox("body", { width: 0.5, height: 0.6, depth: 1.2 }, scene);
-            body.parent = root;
-            body.position.y = 0.6;
-            body.material = furMat;
-
-            var head = BABYLON.MeshBuilder.CreateBox("head", { width: 0.4, height: 0.4, depth: 0.5 }, scene);
-            head.parent = body; head.position = new BABYLON.Vector3(0, 0.4, 0.6); head.material = furMat;
-
-            var snout = BABYLON.MeshBuilder.CreateBox("snout", { width: 0.2, height: 0.2, depth: 0.3 }, scene);
-            snout.parent = head; snout.position.z = 0.3; snout.material = furMat;
-
-            var earL = BABYLON.MeshBuilder.CreatePolyhedron("earL", { type: 1, size: 0.1 }, scene);
-            earL.parent = head; earL.position = new BABYLON.Vector3(-0.15, 0.25, -0.1); earL.material = furMat;
-            var earR = earL.clone(); earR.parent = head; earR.position.x = 0.15;
-
-            var tail = BABYLON.MeshBuilder.CreateCylinder("tail", { diameterTop: 0.1, diameterBottom: 0.2, height: 0.8 }, scene);
-            tail.parent = body; tail.rotation.x = Math.PI / 4; tail.position = new BABYLON.Vector3(0, 0.1, -0.6); tail.material = furMat;
-
-            var createLeg = (name, dx, dz) => {
-                var leg = BABYLON.MeshBuilder.CreateBox(name, { width: 0.15, height: 0.6, depth: 0.15 }, scene);
-                leg.parent = body;
-                leg.position = new BABYLON.Vector3(dx, -0.3, dz);
-                leg.material = furMat;
-                leg.setPivotPoint(new BABYLON.Vector3(0, 0.3, 0));
-                return leg;
-            };
-
-            var f_l = createLeg("LegFL", -0.2, 0.5);
-            var f_r = createLeg("LegFR", 0.2, 0.5);
-            var b_l = createLeg("LegBL", -0.2, -0.5);
-            var b_r = createLeg("LegBR", 0.2, -0.5);
-
-            this.coyotes.push({
-                root: root,
-                head: head,
-                legs: [f_l, f_r, b_l, b_r],
-                dir: new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
-                speed: 2.0,
-                animTime: Math.random() * 100,
-                stateTimer: 0,
-                hp: 25,
-                isFeral: false,
-                visualTimer: 0
-            });
+            this.spawnCoyote(scene, core);
         }
     },
 
