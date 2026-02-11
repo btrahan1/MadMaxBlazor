@@ -179,14 +179,15 @@ var WastelandCombat = {
                 if (BABYLON.Vector3.Distance(p.mesh.position, e.position) < 5.0) {
                     p.mesh.dispose(); this.projectiles.splice(i, 1);
                     e.data.hp--;
-                    if (e.data.hp <= 0) this.destroyEnemy(e, j, core.scene);
+                    if (e.data.hp <= 0) this.destroyEnemy(e, j, core);
                     break;
                 }
             }
         }
     },
 
-    destroyEnemy: function (enemy, index, scene) {
+    destroyEnemy: function (enemy, index, core) {
+        var scene = core.scene;
         var explosion = new BABYLON.ParticleSystem("expl", 200, scene);
         explosion.particleTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/flare.png", scene);
         explosion.emitter = enemy.position.clone();
@@ -195,5 +196,11 @@ var WastelandCombat = {
 
         enemy.dispose();
         this.enemies.splice(index, 1);
+
+        // Award XP (50 for Bandits) and Scrap (25)
+        if (core.dotNetRef) {
+            core.dotNetRef.invokeMethodAsync("AddExperience", 50);
+            core.dotNetRef.invokeMethodAsync("AddScrap", 25);
+        }
     }
 };
