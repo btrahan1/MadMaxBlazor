@@ -96,13 +96,18 @@ var WastelandHero = {
     },
 
     update: function (dt, core) {
-        if (!this.isActive || !this.mesh || !this.mesh.isEnabled()) return;
+        if (!this.isActive || !this.mesh) return;
+        if (!this.mesh.isEnabled()) return;
 
         // Death Check
         if (this.hp <= 0) {
-            console.log("HERO IS DEAD!");
+            if (!this.sentDeathSignal) {
+                this.sentDeathSignal = true;
+                if (core.dotNetRef) core.dotNetRef.invokeMethodAsync("NotifyDeath");
+            }
             WastelandCombatUI.removeHealthBar(this.mesh);
             this.mesh.rotation.z = Math.PI / 2; // Lie down
+            this.combatTarget = null;
             return;
         }
 
@@ -165,13 +170,31 @@ var WastelandHero = {
                     // Check NPC Death
                     if (this.combatTarget.hp <= 0) {
                         console.log("TARGET DESTROYED!");
+
+                        // Award XP (JS to C#)
+                        if (core.dotNetRef) {
+                            core.dotNetRef.invokeMethodAsync("AddExperience", 50);
+                        }
+
                         WastelandCombatUI.removeHealthBar(targetMesh);
+
+                        // Respawn logic (maintain population)
+                        var spawnRange = 1000;
+                        var minSpawnDist = 100;
+                        var rx = 0, rz = 0;
+                        do {
+                            rx = (Math.random() * spawnRange) - (spawnRange / 2);
+                            rz = (Math.random() * spawnRange) - (spawnRange / 2);
+                        } while (BABYLON.Vector3.Distance(this.mesh.position, new BABYLON.Vector3(rx, 0, rz)) < minSpawnDist);
+
                         if (this.combatTarget.root) {
                             this.combatTarget.root.dispose();
                             WastelandNPCs.coyotes = WastelandNPCs.coyotes.filter(c => c !== this.combatTarget);
+                            WastelandNPCs.spawnCoyote(core.scene, core, rx, rz);
                         } else {
                             this.combatTarget.segments.forEach(s => s.dispose());
                             WastelandNPCs.snakes = WastelandNPCs.snakes.filter(s => s !== this.combatTarget);
+                            WastelandNPCs.spawnSnake(core.scene, core, rx, rz);
                         }
                         this.combatTarget = null;
                     }
@@ -231,5 +254,15 @@ var WastelandHero = {
             if (this.limbs.armL) this.limbs.armL.rotation.x = BABYLON.Scalar.Lerp(this.limbs.armL.rotation.x, 0, 10 * dt);
             if (this.limbs.armR) this.limbs.armR.rotation.x = BABYLON.Scalar.Lerp(this.limbs.armR.rotation.x, 0, 10 * dt);
         }
+    },
+
+    revive: function (core) {
+        this.hp = 100;
+        this.sentDeathSignal = false;
+        if (this.mesh) {
+            this.mesh.rotation.z = 0;
+            this.mesh.setEnabled(true);
+        }
+        this.combatTarget = null;
     }
 };
