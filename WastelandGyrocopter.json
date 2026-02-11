@@ -1,0 +1,490 @@
+{
+    "name": "WastelandGyrocopter",
+    "Parts": [
+        {
+            "Id": "Fuselage",
+            "Shape": "Box",
+            "Position": [
+                0,
+                2.0,
+                0
+            ],
+            "Scale": [
+                1.4,
+                1.4,
+                3.5
+            ],
+            "ColorHex": "#4b5320"
+        },
+        {
+            "Id": "NoseCone",
+            "ParentId": "Fuselage",
+            "Shape": "Sphere",
+            "Position": [
+                0,
+                -0.2,
+                1.8
+            ],
+            "Scale": [
+                1.3,
+                1.0,
+                1.0
+            ],
+            "ColorHex": "#4b5320"
+        },
+        {
+            "Id": "CockpitWindow",
+            "ParentId": "Fuselage",
+            "Shape": "Box",
+            "Position": [
+                0,
+                0.4,
+                1.6
+            ],
+            "Scale": [
+                1.2,
+                0.7,
+                0.8
+            ],
+            "ColorHex": "#111111"
+        },
+        {
+            "Id": "EngineHump",
+            "ParentId": "Fuselage",
+            "Shape": "Box",
+            "Position": [
+                0,
+                0.8,
+                0.5
+            ],
+            "Scale": [
+                1.0,
+                0.6,
+                2.0
+            ],
+            "ColorHex": "#333333"
+        },
+        {
+            "Id": "ExhaustL",
+            "ParentId": "EngineHump",
+            "Shape": "Cylinder",
+            "Position": [
+                -0.6,
+                0,
+                -0.5
+            ],
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Scale": [
+                0.3,
+                0.4,
+                0.3
+            ],
+            "ColorHex": "#111111"
+        },
+        {
+            "Id": "ExhaustR",
+            "ParentId": "EngineHump",
+            "Shape": "Cylinder",
+            "Position": [
+                0.6,
+                0,
+                -0.5
+            ],
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Scale": [
+                0.3,
+                0.4,
+                0.3
+            ],
+            "ColorHex": "#111111"
+        },
+        {
+            "Id": "RotorMast",
+            "ParentId": "Fuselage",
+            "Shape": "Cylinder",
+            "Position": [
+                0,
+                1.0,
+                0.5
+            ],
+            "Scale": [
+                0.2,
+                0.8,
+                0.2
+            ],
+            "ColorHex": "#222222"
+        },
+        {
+            "Id": "RotorHub",
+            "ParentId": "RotorMast",
+            "Shape": "Cylinder",
+            "Position": [
+                0,
+                0.4,
+                0
+            ],
+            "Scale": [
+                0.6,
+                0.2,
+                0.6
+            ],
+            "ColorHex": "#444444"
+        },
+        {
+            "Id": "Blade1",
+            "ParentId": "RotorHub",
+            "Shape": "Box",
+            "Position": [
+                0,
+                0,
+                2.5
+            ],
+            "Scale": [
+                0.25,
+                0.05,
+                5.0
+            ],
+            "ColorHex": "#1a1a1a"
+        },
+        {
+            "Id": "Blade2",
+            "ParentId": "RotorHub",
+            "Shape": "Box",
+            "Position": [
+                2.4,
+                0,
+                0.8
+            ],
+            "Rotation": [
+                0,
+                72,
+                0
+            ],
+            "Scale": [
+                0.25,
+                0.05,
+                5.0
+            ],
+            "ColorHex": "#1a1a1a"
+        },
+        {
+            "Id": "Blade3",
+            "ParentId": "RotorHub",
+            "Shape": "Box",
+            "Position": [
+                1.5,
+                0,
+                -2.0
+            ],
+            "Rotation": [
+                0,
+                144,
+                0
+            ],
+            "Scale": [
+                0.25,
+                0.05,
+                5.0
+            ],
+            "ColorHex": "#1a1a1a"
+        },
+        {
+            "Id": "Blade4",
+            "ParentId": "RotorHub",
+            "Shape": "Box",
+            "Position": [
+                -1.5,
+                0,
+                -2.0
+            ],
+            "Rotation": [
+                0,
+                216,
+                0
+            ],
+            "Scale": [
+                0.25,
+                0.05,
+                5.0
+            ],
+            "ColorHex": "#1a1a1a"
+        },
+        {
+            "Id": "Blade5",
+            "ParentId": "RotorHub",
+            "Shape": "Box",
+            "Position": [
+                -2.4,
+                0,
+                0.8
+            ],
+            "Rotation": [
+                0,
+                288,
+                0
+            ],
+            "Scale": [
+                0.25,
+                0.05,
+                5.0
+            ],
+            "ColorHex": "#1a1a1a"
+        },
+        {
+            "Id": "TailBoom",
+            "ParentId": "Fuselage",
+            "Shape": "Box",
+            "Position": [
+                0,
+                0.2,
+                -2.5
+            ],
+            "Scale": [
+                0.5,
+                0.6,
+                2.0
+            ],
+            "ColorHex": "#4b5320"
+        },
+        {
+            "Id": "TailFin",
+            "ParentId": "TailBoom",
+            "Shape": "Box",
+            "Position": [
+                0,
+                0.5,
+                -1.0
+            ],
+            "Rotation": [
+                15,
+                0,
+                0
+            ],
+            "Scale": [
+                0.2,
+                1.5,
+                0.8
+            ],
+            "ColorHex": "#4b5320"
+        },
+        {
+            "Id": "TailRotorShaft",
+            "ParentId": "TailFin",
+            "Shape": "Cylinder",
+            "Position": [
+                0.2,
+                0.6,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Scale": [
+                0.1,
+                0.4,
+                0.1
+            ],
+            "ColorHex": "#222222"
+        },
+        {
+            "Id": "TailBlade1",
+            "ParentId": "TailRotorShaft",
+            "Shape": "Box",
+            "Position": [
+                0,
+                0,
+                0
+            ],
+            "Scale": [
+                0.1,
+                0.05,
+                1.6
+            ],
+            "ColorHex": "#aa0000"
+        },
+        {
+            "Id": "TailBlade2",
+            "ParentId": "TailRotorShaft",
+            "Shape": "Box",
+            "Position": [
+                0,
+                0,
+                0
+            ],
+            "Rotation": [
+                0,
+                90,
+                0
+            ],
+            "Scale": [
+                0.1,
+                0.05,
+                1.6
+            ],
+            "ColorHex": "#aa0000"
+        },
+        {
+            "Id": "SponsonL",
+            "ParentId": "Fuselage",
+            "Shape": "Box",
+            "Position": [
+                -1.0,
+                -0.6,
+                0.5
+            ],
+            "Scale": [
+                0.6,
+                0.6,
+                1.5
+            ],
+            "ColorHex": "#333333"
+        },
+        {
+            "Id": "SponsonR",
+            "ParentId": "Fuselage",
+            "Shape": "Box",
+            "Position": [
+                1.0,
+                -0.6,
+                0.5
+            ],
+            "Scale": [
+                0.6,
+                0.6,
+                1.5
+            ],
+            "ColorHex": "#333333"
+        },
+        {
+            "Id": "WheelL",
+            "ParentId": "SponsonL",
+            "Shape": "Cylinder",
+            "Position": [
+                -0.2,
+                -0.4,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Scale": [
+                0.6,
+                0.3,
+                0.6
+            ],
+            "ColorHex": "#111111"
+        },
+        {
+            "Id": "WheelR",
+            "ParentId": "SponsonR",
+            "Shape": "Cylinder",
+            "Position": [
+                0.2,
+                -0.4,
+                0
+            ],
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Scale": [
+                0.6,
+                0.3,
+                0.6
+            ],
+            "ColorHex": "#111111"
+        },
+        {
+            "Id": "WheelBack",
+            "ParentId": "TailBoom",
+            "Shape": "Cylinder",
+            "Position": [
+                0,
+                -0.4,
+                -0.5
+            ],
+            "Rotation": [
+                0,
+                0,
+                90
+            ],
+            "Scale": [
+                0.4,
+                0.2,
+                0.4
+            ],
+            "ColorHex": "#111111"
+        },
+        {
+            "Id": "ChinGunMount",
+            "ParentId": "Fuselage",
+            "Shape": "Box",
+            "Position": [
+                0,
+                -0.8,
+                1.5
+            ],
+            "Scale": [
+                0.6,
+                0.4,
+                0.6
+            ],
+            "ColorHex": "#222222"
+        },
+        {
+            "Id": "ChinGunL",
+            "ParentId": "ChinGunMount",
+            "Shape": "Cylinder",
+            "Position": [
+                -0.2,
+                -0.1,
+                0.4
+            ],
+            "Rotation": [
+                90,
+                0,
+                0
+            ],
+            "Scale": [
+                0.08,
+                0.8,
+                0.08
+            ],
+            "ColorHex": "#000000"
+        },
+        {
+            "Id": "ChinGunR",
+            "ParentId": "ChinGunMount",
+            "Shape": "Cylinder",
+            "Position": [
+                0.2,
+                -0.1,
+                0.4
+            ],
+            "Rotation": [
+                90,
+                0,
+                0
+            ],
+            "Scale": [
+                0.08,
+                0.8,
+                0.08
+            ],
+            "ColorHex": "#000000"
+        }
+    ]
+}

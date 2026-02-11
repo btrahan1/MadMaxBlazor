@@ -1,0 +1,511 @@
+{
+    "Name": "WastelandHero",
+    "Parts": [
+        {
+            "Id": "root",
+            "ParentId": "0",
+            "Shape": "Box",
+            "Name": "pelvis",
+            "Position": [
+                0.0,
+                0.9,
+                0.0
+            ],
+            "Scale": [
+                0.45,
+                0.25,
+                0.25
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#2E2E2E"
+        },
+        {
+            "Id": "torso",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "torso",
+            "Position": [
+                0.0,
+                0.5,
+                0.0
+            ],
+            "Scale": [
+                0.5,
+                0.6,
+                0.3
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A1A1A"
+        },
+        {
+            "Id": "backpack",
+            "ParentId": "torso",
+            "Shape": "Box",
+            "Name": "backpack",
+            "Position": [
+                0.0,
+                0.0,
+                -0.25
+            ],
+            "Scale": [
+                0.4,
+                0.45,
+                0.2
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#4B5320"
+        },
+        {
+            "Id": "neck",
+            "ParentId": "torso",
+            "Shape": "Cylinder",
+            "Name": "neck",
+            "Position": [
+                0.0,
+                0.35,
+                0.0
+            ],
+            "Scale": [
+                0.15,
+                0.15,
+                0.15
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#E0AC69"
+        },
+        {
+            "Id": "head",
+            "ParentId": "neck",
+            "Shape": "Sphere",
+            "Name": "head",
+            "Position": [
+                0.0,
+                0.25,
+                0.0
+            ],
+            "Scale": [
+                0.35,
+                0.35,
+                0.35
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#E0AC69"
+        },
+        {
+            "Id": "goggles",
+            "ParentId": "head",
+            "Shape": "Box",
+            "Name": "goggles",
+            "Position": [
+                0.0,
+                0.05,
+                0.16
+            ],
+            "Scale": [
+                0.25,
+                0.08,
+                0.1
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#333333"
+        },
+        {
+            "Id": "mohawk",
+            "ParentId": "head",
+            "Shape": "Cylinder",
+            "Name": "mohawk",
+            "Position": [
+                0.0,
+                0.18,
+                -0.05
+            ],
+            "Scale": [
+                0.05,
+                0.25,
+                0.25
+            ],
+            "Rotation": [
+                90.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#8B0000"
+        },
+        {
+            "Id": "arm_l_shoulder",
+            "ParentId": "torso",
+            "Shape": "Sphere",
+            "Name": "arm_l_shoulder",
+            "Position": [
+                -0.3,
+                0.25,
+                0.0
+            ],
+            "Scale": [
+                0.18,
+                0.18,
+                0.18
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A1A1A"
+        },
+        {
+            "Id": "arm_l_upper",
+            "ParentId": "arm_l_shoulder",
+            "Shape": "Capsule",
+            "Name": "arm_l_upper",
+            "Position": [
+                0.0,
+                -0.2,
+                0.0
+            ],
+            "Scale": [
+                0.13,
+                0.35,
+                0.13
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                10.0
+            ],
+            "ColorHex": "#1A1A1A"
+        },
+        {
+            "Id": "arm_l_lower",
+            "ParentId": "arm_l_upper",
+            "Shape": "Capsule",
+            "Name": "arm_l_lower",
+            "Position": [
+                0.0,
+                -0.3,
+                0.1
+            ],
+            "Scale": [
+                0.11,
+                0.3,
+                0.11
+            ],
+            "Rotation": [
+                -45.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#E0AC69"
+        },
+        {
+            "Id": "hand_l",
+            "ParentId": "arm_l_lower",
+            "Shape": "Sphere",
+            "Name": "hand_l",
+            "Position": [
+                0.0,
+                -0.2,
+                0.0
+            ],
+            "Scale": [
+                0.12,
+                0.12,
+                0.12
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#E0AC69"
+        },
+        {
+            "Id": "arm_r_shoulder",
+            "ParentId": "torso",
+            "Shape": "Box",
+            "Name": "arm_r_shoulder",
+            "Position": [
+                0.3,
+                0.25,
+                0.0
+            ],
+            "Scale": [
+                0.2,
+                0.2,
+                0.2
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#333333"
+        },
+        {
+            "Id": "arm_r_upper",
+            "ParentId": "arm_r_shoulder",
+            "Shape": "Cylinder",
+            "Name": "arm_r_upper",
+            "Position": [
+                0.0,
+                -0.2,
+                0.0
+            ],
+            "Scale": [
+                0.13,
+                0.35,
+                0.13
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                -10.0
+            ],
+            "ColorHex": "#C0C0C0"
+        },
+        {
+            "Id": "arm_r_lower",
+            "ParentId": "arm_r_upper",
+            "Shape": "Box",
+            "Name": "arm_r_lower",
+            "Position": [
+                0.0,
+                -0.3,
+                0.1
+            ],
+            "Scale": [
+                0.1,
+                0.3,
+                0.1
+            ],
+            "Rotation": [
+                -60.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#A0A0A0"
+        },
+        {
+            "Id": "hand_r",
+            "ParentId": "arm_r_lower",
+            "Shape": "Box",
+            "Name": "hand_r",
+            "Position": [
+                0.0,
+                -0.2,
+                0.0
+            ],
+            "Scale": [
+                0.1,
+                0.12,
+                0.1
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#555555"
+        },
+        {
+            "Id": "leg_l_upper",
+            "ParentId": "root",
+            "Shape": "Capsule",
+            "Name": "leg_l_upper",
+            "Position": [
+                -0.15,
+                -0.25,
+                0.0
+            ],
+            "Scale": [
+                0.16,
+                0.45,
+                0.16
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                5.0
+            ],
+            "ColorHex": "#36454F"
+        },
+        {
+            "Id": "leg_l_lower",
+            "ParentId": "leg_l_upper",
+            "Shape": "Capsule",
+            "Name": "leg_l_lower",
+            "Position": [
+                0.0,
+                -0.4,
+                0.0
+            ],
+            "Scale": [
+                0.14,
+                0.45,
+                0.14
+            ],
+            "Rotation": [
+                10.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#36454F"
+        },
+        {
+            "Id": "foot_l",
+            "ParentId": "leg_l_lower",
+            "Shape": "Box",
+            "Name": "foot_l",
+            "Position": [
+                0.0,
+                -0.25,
+                0.1
+            ],
+            "Scale": [
+                0.15,
+                0.15,
+                0.25
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#111111"
+        },
+        {
+            "Id": "leg_r_upper",
+            "ParentId": "root",
+            "Shape": "Capsule",
+            "Name": "leg_r_upper",
+            "Position": [
+                0.15,
+                -0.25,
+                0.0
+            ],
+            "Scale": [
+                0.16,
+                0.45,
+                0.16
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                -5.0
+            ],
+            "ColorHex": "#36454F"
+        },
+        {
+            "Id": "leg_r_lower",
+            "ParentId": "leg_r_upper",
+            "Shape": "Capsule",
+            "Name": "leg_r_lower",
+            "Position": [
+                0.0,
+                -0.4,
+                0.0
+            ],
+            "Scale": [
+                0.14,
+                0.45,
+                0.14
+            ],
+            "Rotation": [
+                5.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#36454F"
+        },
+        {
+            "Id": "foot_r",
+            "ParentId": "leg_r_lower",
+            "Shape": "Box",
+            "Name": "foot_r",
+            "Position": [
+                0.0,
+                -0.25,
+                0.1
+            ],
+            "Scale": [
+                0.15,
+                0.15,
+                0.25
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#111111"
+        },
+        {
+            "Id": "shotgun",
+            "ParentId": "hand_r",
+            "Shape": "Cylinder",
+            "Name": "shotgun",
+            "Position": [
+                -0.3,
+                0.0,
+                0.2
+            ],
+            "Scale": [
+                0.05,
+                0.8,
+                0.05
+            ],
+            "Rotation": [
+                90.0,
+                0.0,
+                -90.0
+            ],
+            "ColorHex": "#222222"
+        },
+        {
+            "Id": "shotgun_stock",
+            "ParentId": "shotgun",
+            "Shape": "Box",
+            "Name": "shotgun_stock",
+            "Position": [
+                0.0,
+                -0.5,
+                0.0
+            ],
+            "Scale": [
+                0.1,
+                0.3,
+                0.1
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#5C4033"
+        }
+    ]
+}

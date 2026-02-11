@@ -1,0 +1,665 @@
+{
+    "Name": "NuclearHydra",
+    "Parts": [
+        {
+            "Id": "root",
+            "ParentId": "0",
+            "Shape": "Box",
+            "Name": "torso",
+            "Position": [
+                0.0,
+                5.0,
+                0.0
+            ],
+            "Scale": [
+                4.0,
+                3.5,
+                8.0
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "chest_glow",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "chest_glow",
+            "Position": [
+                0.0,
+                0.0,
+                4.1
+            ],
+            "Scale": [
+                2.5,
+                2.0,
+                0.2
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#FF00FF"
+        },
+        {
+            "Id": "neck_c_1",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "neck_c_1",
+            "Position": [
+                0.0,
+                2.0,
+                4.0
+            ],
+            "Scale": [
+                1.5,
+                1.5,
+                2.5
+            ],
+            "Rotation": [
+                20.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#2D0055"
+        },
+        {
+            "Id": "neck_c_2",
+            "ParentId": "neck_c_1",
+            "Shape": "Box",
+            "Name": "neck_c_2",
+            "Position": [
+                0.0,
+                0.0,
+                2.5
+            ],
+            "Scale": [
+                1.2,
+                1.2,
+                2.0
+            ],
+            "Rotation": [
+                20.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#2D0055"
+        },
+        {
+            "Id": "head_c",
+            "ParentId": "neck_c_2",
+            "Shape": "Box",
+            "Name": "head_c",
+            "Position": [
+                0.0,
+                0.0,
+                2.0
+            ],
+            "Scale": [
+                2.5,
+                2.5,
+                3.5
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "eye_c_l",
+            "ParentId": "head_c",
+            "Shape": "Box",
+            "Name": "eye_c_l",
+            "Position": [
+                -0.6,
+                0.5,
+                1.8
+            ],
+            "Scale": [
+                0.4,
+                0.3,
+                0.1
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#FFFFFF"
+        },
+        {
+            "Id": "eye_c_r",
+            "ParentId": "head_c",
+            "Shape": "Box",
+            "Name": "eye_c_r",
+            "Position": [
+                0.6,
+                0.5,
+                1.8
+            ],
+            "Scale": [
+                0.4,
+                0.3,
+                0.1
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#FFFFFF"
+        },
+        {
+            "Id": "horn_c_l",
+            "ParentId": "head_c",
+            "Shape": "Cylinder",
+            "Name": "horn_c_l",
+            "Position": [
+                -0.8,
+                1.5,
+                -0.5
+            ],
+            "Scale": [
+                0.4,
+                1.5,
+                0.4
+            ],
+            "Rotation": [
+                -30.0,
+                0.0,
+                20.0
+            ],
+            "ColorHex": "#FF00FF"
+        },
+        {
+            "Id": "horn_c_r",
+            "ParentId": "head_c",
+            "Shape": "Cylinder",
+            "Name": "horn_c_r",
+            "Position": [
+                0.8,
+                1.5,
+                -0.5
+            ],
+            "Scale": [
+                0.4,
+                1.5,
+                0.4
+            ],
+            "Rotation": [
+                -30.0,
+                0.0,
+                -20.0
+            ],
+            "ColorHex": "#FF00FF"
+        },
+        {
+            "Id": "neck_l_1",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "neck_l_1",
+            "Position": [
+                -1.5,
+                1.0,
+                3.5
+            ],
+            "Scale": [
+                1.2,
+                1.2,
+                2.0
+            ],
+            "Rotation": [
+                10.0,
+                -30.0,
+                0.0
+            ],
+            "ColorHex": "#2D0055"
+        },
+        {
+            "Id": "neck_l_2",
+            "ParentId": "neck_l_1",
+            "Shape": "Box",
+            "Name": "neck_l_2",
+            "Position": [
+                0.0,
+                0.0,
+                2.0
+            ],
+            "Scale": [
+                1.0,
+                1.0,
+                1.8
+            ],
+            "Rotation": [
+                10.0,
+                -10.0,
+                0.0
+            ],
+            "ColorHex": "#2D0055"
+        },
+        {
+            "Id": "head_l",
+            "ParentId": "neck_l_2",
+            "Shape": "Box",
+            "Name": "head_l",
+            "Position": [
+                0.0,
+                0.0,
+                1.8
+            ],
+            "Scale": [
+                2.0,
+                2.0,
+                2.8
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "eye_l_l",
+            "ParentId": "head_l",
+            "Shape": "Box",
+            "Name": "eye_l_l",
+            "Position": [
+                -0.5,
+                0.4,
+                1.4
+            ],
+            "Scale": [
+                0.3,
+                0.2,
+                0.1
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#FF00FF"
+        },
+        {
+            "Id": "eye_l_r",
+            "ParentId": "head_l",
+            "Shape": "Box",
+            "Name": "eye_l_r",
+            "Position": [
+                0.5,
+                0.4,
+                1.4
+            ],
+            "Scale": [
+                0.3,
+                0.2,
+                0.1
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#FF00FF"
+        },
+        {
+            "Id": "neck_r_1",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "neck_r_1",
+            "Position": [
+                1.5,
+                1.0,
+                3.5
+            ],
+            "Scale": [
+                1.2,
+                1.2,
+                2.0
+            ],
+            "Rotation": [
+                10.0,
+                30.0,
+                0.0
+            ],
+            "ColorHex": "#2D0055"
+        },
+        {
+            "Id": "neck_r_2",
+            "ParentId": "neck_r_1",
+            "Shape": "Box",
+            "Name": "neck_r_2",
+            "Position": [
+                0.0,
+                0.0,
+                2.0
+            ],
+            "Scale": [
+                1.0,
+                1.0,
+                1.8
+            ],
+            "Rotation": [
+                10.0,
+                10.0,
+                0.0
+            ],
+            "ColorHex": "#2D0055"
+        },
+        {
+            "Id": "head_r",
+            "ParentId": "neck_r_2",
+            "Shape": "Box",
+            "Name": "head_r",
+            "Position": [
+                0.0,
+                0.0,
+                1.8
+            ],
+            "Scale": [
+                2.0,
+                2.0,
+                2.8
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "eye_r_l",
+            "ParentId": "head_r",
+            "Shape": "Box",
+            "Name": "eye_r_l",
+            "Position": [
+                -0.5,
+                0.4,
+                1.4
+            ],
+            "Scale": [
+                0.3,
+                0.2,
+                0.1
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#FF00FF"
+        },
+        {
+            "Id": "eye_r_r",
+            "ParentId": "head_r",
+            "Shape": "Box",
+            "Name": "eye_r_r",
+            "Position": [
+                0.5,
+                0.4,
+                1.4
+            ],
+            "Scale": [
+                0.3,
+                0.2,
+                0.1
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#FF00FF"
+        },
+        {
+            "Id": "wing_l_1",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "wing_l_1",
+            "Position": [
+                -2.0,
+                1.5,
+                -1.0
+            ],
+            "Scale": [
+                6.0,
+                0.2,
+                4.0
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                20.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "wing_l_2",
+            "ParentId": "wing_l_1",
+            "Shape": "Box",
+            "Name": "wing_l_2",
+            "Position": [
+                -6.0,
+                0.0,
+                0.0
+            ],
+            "Scale": [
+                6.0,
+                0.2,
+                6.0
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                20.0
+            ],
+            "ColorHex": "#FF00FF"
+        },
+        {
+            "Id": "wing_r_1",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "wing_r_1",
+            "Position": [
+                2.0,
+                1.5,
+                -1.0
+            ],
+            "Scale": [
+                6.0,
+                0.2,
+                4.0
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                -20.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "wing_r_2",
+            "ParentId": "wing_r_1",
+            "Shape": "Box",
+            "Name": "wing_r_2",
+            "Position": [
+                6.0,
+                0.0,
+                0.0
+            ],
+            "Scale": [
+                6.0,
+                0.2,
+                6.0
+            ],
+            "Rotation": [
+                0.0,
+                0.0,
+                -20.0
+            ],
+            "ColorHex": "#FF00FF"
+        },
+        {
+            "Id": "leg_fl",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "leg_fl",
+            "Position": [
+                -2.0,
+                -1.5,
+                3.0
+            ],
+            "Scale": [
+                1.5,
+                4.0,
+                1.5
+            ],
+            "Rotation": [
+                10.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "leg_fr",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "leg_fr",
+            "Position": [
+                2.0,
+                -1.5,
+                3.0
+            ],
+            "Scale": [
+                1.5,
+                4.0,
+                1.5
+            ],
+            "Rotation": [
+                10.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "leg_bl",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "leg_bl",
+            "Position": [
+                -2.0,
+                -1.5,
+                -3.0
+            ],
+            "Scale": [
+                1.5,
+                4.0,
+                1.5
+            ],
+            "Rotation": [
+                -10.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "leg_br",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "leg_br",
+            "Position": [
+                2.0,
+                -1.5,
+                -3.0
+            ],
+            "Scale": [
+                1.5,
+                4.0,
+                1.5
+            ],
+            "Rotation": [
+                -10.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "tail_1",
+            "ParentId": "root",
+            "Shape": "Box",
+            "Name": "tail_1",
+            "Position": [
+                0.0,
+                -1.0,
+                -4.0
+            ],
+            "Scale": [
+                1.8,
+                1.5,
+                4.0
+            ],
+            "Rotation": [
+                -20.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#2D0055"
+        },
+        {
+            "Id": "tail_2",
+            "ParentId": "tail_1",
+            "Shape": "Box",
+            "Name": "tail_2",
+            "Position": [
+                0.0,
+                0.0,
+                -4.0
+            ],
+            "Scale": [
+                1.2,
+                1.0,
+                4.0
+            ],
+            "Rotation": [
+                -10.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#1A0033"
+        },
+        {
+            "Id": "tail_tip",
+            "ParentId": "tail_2",
+            "Shape": "Cylinder",
+            "Name": "tail_tip",
+            "Position": [
+                0.0,
+                0.0,
+                -3.0
+            ],
+            "Scale": [
+                0.5,
+                2.0,
+                0.5
+            ],
+            "Rotation": [
+                90.0,
+                0.0,
+                0.0
+            ],
+            "ColorHex": "#FF00FF"
+        }
+    ]
+}
