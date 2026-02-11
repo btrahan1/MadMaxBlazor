@@ -119,6 +119,18 @@ var wastelandRenderer = {
                         }
                     }
 
+                    if (!targetNPC) {
+                        for (var s of WastelandNPCs.shopkeepers) {
+                            if (mesh === s || mesh.isDescendantOf(s)) {
+                                console.log("OPENING SHOP!");
+                                if (this.dotNetRef) {
+                                    this.dotNetRef.invokeMethodAsync("OpenShop");
+                                }
+                                return; // Don't engage combat with shopkeeper
+                            }
+                        }
+                    }
+
                     if (targetNPC) {
                         console.log("COMBAT ENGAGED!");
                         targetNPC.isFeral = true;
@@ -162,6 +174,9 @@ var wastelandRenderer = {
         // Fauna
         WastelandNPCs.createSnakes(scene, 10, this);
         WastelandNPCs.createCoyotes(scene, 5, this);
+
+        // Shopkeepers
+        WastelandNPCs.spawnShopkeeper(scene, 50, 50, this); // One at 50, 50
 
         // Vehicle
         this.createBuggy(scene);

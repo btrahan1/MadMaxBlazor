@@ -67,9 +67,9 @@
     @if (ShowPaperdoll)
     {
         <div class="paperdoll-overlay">
-            <div class="paperdoll-window">
+            <div class="paperdoll-window wide">
                 <div class="paperdoll-header">
-                    <h2>CHARACTER</h2>
+                    <h2>SURVIVOR SHEET</h2>
                     <button class="close-btn" @onclick="TogglePaperdoll">×</button>
                 </div>
                 
@@ -90,24 +90,75 @@
                         </div>
 
                         <div class="stats-list">
-                            @renderStat("STR", State.Strength)
-                            @renderStat("DEX", State.Dexterity)
-                            @renderStat("CON", State.Constitution)
-                            @renderStat("INT", State.Intelligence)
-                            @renderStat("WIS", State.Wisdom)
-                            @renderStat("CHA", State.Charisma)
+                            @renderStat("STR", State.GetTotalStat("STR"))
+                            @renderStat("DEX", State.GetTotalStat("DEX"))
+                            @renderStat("CON", State.GetTotalStat("CON"))
+                            @renderStat("INT", State.GetTotalStat("INT"))
+                            @renderStat("WIS", State.GetTotalStat("WIS"))
+                            @renderStat("CHA", State.GetTotalStat("CHA"))
+                            <div class="stat-row scrap-row" style="margin-top: 15px; border-top: 1px solid #333; padding-top: 10px;">
+                                <span class="stat-name" style="color: gold; width: 80px;">SCRAP</span>
+                                <span class="stat-val" style="color: gold;">@State.Scrap</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="equipment-card">
+                        <h3>EQUIPMENT</h3>
+                        <div class="equip-grid">
+                            @foreach (var slot in new[] { "HEAD", "CHEST", "BACK", "LEGS", "FEET", "MAIN", "OFF", "GLOVES" })
+                            {
+                                <div class="equip-slot" @onclick="() => Unequip(slot)">
+                                    <span class="slot-label">@slot</span>
+                                    @if (State.Equipment.ContainsKey(slot) && State.Equipment[slot] != null)
+                                    {
+                                        <div class="item-icon">@State.Equipment[slot].GetIcon()</div>
+                                        <div class="item-name">@State.Equipment[slot].Name</div>
+                                    }
+                                </div>
+                            }
                         </div>
                     </div>
 
                     <div class="inventory-card">
                         <h3>INVENTORY</h3>
-                        <div class="inv-grid">
-                            <div class="inv-slot gear">HEAD</div>
-                            <div class="inv-slot gear">CHEST</div>
-                            <div class="inv-slot gear">LEGS</div>
-                            <div class="inv-slot gear">MAIN</div>
-                            <div class="inv-slot gear">OFF</div>
+                        <div class="inv-scroll">
+                            @foreach (var item in State.Inventory)
+                            {
+                                <div class="inv-item" @onclick="() => Equip(item)">
+                                    <span class="item-icon">@item.GetIcon()</span>
+                                    <span class="item-name">@item.Name</span>
+                                    @if (item.Slot != "NONE") { <span class="equip-hint">(Equip)</span> }
+                                </div>
+                            }
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (ShowShop)
+    {
+        <div class="shop-overlay">
+            <div class="shop-window">
+                <div class="shop-header">
+                    <h2>WASTELAND TRADER</h2>
+                    <button class="close-btn" @onclick="CloseShop">×</button>
+                </div>
+                <div class="shop-content">
+                    <p class="scrap-total">SCRAP: <span style="color: gold;">@State.Scrap</span></p>
+                    <div class="shop-grid">
+                        @foreach (var item in ShopItems)
+                        {
+                            <div class="shop-item @(State.Scrap >= item.Cost ? "" : "locked")" @onclick="() => BuyItem(item)">
+                                <div class="item-icon">@item.GetIcon()</div>
+                                <div class="item-info">
+                                    <span class="item-name">@item.Name</span>
+                                    <span class="item-cost">@item.Cost Scrap</span>
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -422,11 +473,45 @@
     .points-glow { color: #00ccff; font-weight: bold; text-shadow: 0 0 10px #00ccff; display: block; margin-bottom: 15px; }
 
     .inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .inv-slot { 
-        height: 60px; background: #111; border: 1px dashed #444; 
-        display: flex; justify-content: center; align-items: center; font-size: 10px; color: #444;
-    }
     .inv-slot.gear { border-style: solid; color: #666; }
+
+    /* Shop Styles */
+    .shop-overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 400; backdrop-filter: blur(10px);
+    }
+    .shop-window {
+        width: 500px; background: #1a1a1a; border: 3px solid gold;
+        padding: 20px; color: white; font-family: 'Courier New', monospace;
+    }
+    .shop-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; margin-bottom: 20px; }
+    .scrap-total { font-size: 24px; font-weight: bold; margin-bottom: 20px; text-align: center; border: 1px solid #444; padding: 10px; }
+    .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .shop-item { 
+        background: #222; border: 1px solid #444; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s;
+    }
+    .shop-item:hover { border-color: gold; background: #333; }
+    .shop-item.locked { opacity: 0.5; cursor: default; }
+    .item-info { display: flex; flex-direction: column; }
+    .item-cost { color: gold; font-size: 14px; }
+
+    /* Paperdoll Extended */
+    .paperdoll-window.wide { width: 800px; }
+    .equipment-card, .inventory-card { flex: 1; background: #222; padding: 15px; border: 1px solid #333; }
+    .equip-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .equip-slot { 
+        height: 60px; background: #111; border: 1px solid #444; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: pointer;
+    }
+    .slot-label { position: absolute; top: 2px; left: 5px; font-size: 10px; color: #555; }
+    .inv-scroll { height: 300px; overflow-y: auto; }
+    .inv-item { 
+        padding: 8px; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 10px; align-items: center;
+    }
+    .inv-item:hover { background: #333; }
+    .equip-hint { font-size: 10px; color: #00ccff; }
 
     /* Level Up Popup */
     .level-up-popup {
@@ -494,7 +579,22 @@
     private bool ShowSplash { get; set; } = true;
     private bool ShowPaperdoll { get; set; } = false;
     private bool ShowLevelUp { get; set; } = false;
+    private bool ShowShop { get; set; } = false;
     private bool HasSave { get; set; } = false;
+
+    private List<MadMaxBlazor.Services.Item> ShopItems = new List<MadMaxBlazor.Services.Item>()
+    {
+        new MadMaxBlazor.Services.Item { Name = "Spiked Helmet", Slot = "HEAD", Cost = 50, BonusCon = 2 },
+        new MadMaxBlazor.Services.Item { Name = "Scrap Plate", Slot = "CHEST", Cost = 150, BonusCon = 5 },
+        new MadMaxBlazor.Services.Item { Name = "Rust-Back Tank", Slot = "BACK", Cost = 120, BonusStr = 2 },
+        new MadMaxBlazor.Services.Item { Name = "Spiked Boots", Slot = "FEET", Cost = 60, BonusDex = 2 },
+        new MadMaxBlazor.Services.Item { Name = "Motor Goggles", Slot = "HEAD", Cost = 30, BonusDex = 2 },
+        new MadMaxBlazor.Services.Item { Name = "Sawed Off", Slot = "MAIN", Cost = 250, BonusStr = 4 },
+        new MadMaxBlazor.Services.Item { Name = "Machete", Slot = "MAIN", Cost = 100, BonusStr = 2 },
+        new MadMaxBlazor.Services.Item { Name = "Buckler", Slot = "OFF", Cost = 80, BonusCon = 2 },
+        new MadMaxBlazor.Services.Item { Name = "Leather Chaps", Slot = "LEGS", Cost = 70, BonusDex = 3 },
+        new MadMaxBlazor.Services.Item { Name = "Welder's Gloves", Slot = "GLOVES", Cost = 40, BonusDex = 2 }
+    };
 
     [Inject] MadMaxBlazor.Services.GameState State { get; set; } = default!;
     [Inject] MadMaxBlazor.Services.PersistenceService Persistence { get; set; } = default!;
@@ -530,6 +630,43 @@
     public void TogglePaperdollFromJS()
     {
         TogglePaperdoll();
+    }
+
+    [JSInvokable]
+    public void OpenShop()
+    {
+        ShowShop = true;
+        StateHasChanged();
+    }
+
+    private void CloseShop()
+    {
+        ShowShop = false;
+        StateHasChanged();
+    }
+
+    private async void BuyItem(MadMaxBlazor.Services.Item item)
+    {
+        if (State.Scrap >= item.Cost)
+        {
+            State.BuyItem(item);
+            await Persistence.SaveGame(State);
+            StateHasChanged();
+        }
+    }
+
+    private async void Equip(MadMaxBlazor.Services.Item item)
+    {
+        State.EquipItem(item);
+        await Persistence.SaveGame(State);
+        StateHasChanged();
+    }
+
+    private async void Unequip(string slot)
+    {
+        State.UnequipItem(slot);
+        await Persistence.SaveGame(State);
+        StateHasChanged();
     }
 
     private async void AllocatePoint(string stat)
@@ -609,9 +746,10 @@
     }
 
     [JSInvokable]
-    public void AddScrap(int amount)
+    public async Task AddScrap(int amount)
     {
         State.AddScrap(amount);
+        await Persistence.SaveGame(State);
     }
 
     public void Dispose()

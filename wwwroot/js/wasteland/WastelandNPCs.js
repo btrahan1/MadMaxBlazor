@@ -6,6 +6,7 @@ var WastelandNPCs = {
     helis: [],
     bosses: [],
     hydras: [],
+    shopkeepers: [],
 
     init: function (scene) {
         // Any global init for NPCs
@@ -179,6 +180,49 @@ var WastelandNPCs = {
         this.survivors.push(npc);
     },
 
+    spawnShopkeeper: function (scene, x, z, core) {
+        var npc = new BABYLON.TransformNode("shopkeeper", scene);
+        npc.position = new BABYLON.Vector3(x, 0, z);
+
+        var skinMat = new BABYLON.StandardMaterial("shopSkin", scene);
+        skinMat.diffuseColor = new BABYLON.Color3(0.7, 0.5, 0.4);
+        var clothMat = new BABYLON.StandardMaterial("shopCloth", scene);
+        clothMat.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.2); // Yellow/Gold merchant
+
+        var torso = BABYLON.MeshBuilder.CreateBox("torso", { width: 0.6, height: 0.8, depth: 0.4 }, scene);
+        torso.parent = npc; torso.position.y = 1.2; torso.material = clothMat;
+        var head = BABYLON.MeshBuilder.CreateSphere("head", { diameter: 0.4 }, scene);
+        head.parent = torso; head.position.y = 0.6; head.material = skinMat;
+
+        // Hat
+        var hat = BABYLON.MeshBuilder.CreateCylinder("hat", { diameterTop: 0.1, diameterBottom: 0.6, height: 0.4 }, scene);
+        hat.parent = head; hat.position.y = 0.2; hat.material = clothMat;
+
+        var footMat = new BABYLON.StandardMaterial("footMat", scene);
+        footMat.diffuseColor = BABYLON.Color3.Black();
+
+        var createLimb = (w, h, px, py, pz) => {
+            var limb = BABYLON.MeshBuilder.CreateBox("limb", { width: w, height: h, depth: w }, scene);
+            limb.parent = npc; limb.position = new BABYLON.Vector3(px, py, pz);
+            limb.material = clothMat;
+        };
+
+        createLimb(0.2, 0.8, -0.4, 1.4, 0); // la
+        createLimb(0.2, 0.8, 0.4, 1.4, 0);  // ra
+        createLimb(0.25, 1.0, -0.2, 0.5, 0); // ll
+        createLimb(0.25, 1.0, 0.2, 0.5, 0);  // rl
+
+        // Shop Stand/Table
+        var table = BABYLON.MeshBuilder.CreateBox("table", { width: 2.5, height: 1.0, depth: 1.2 }, scene);
+        table.parent = npc; table.position = new BABYLON.Vector3(0, 0.5, 1.0);
+        var tableMat = new BABYLON.StandardMaterial("tableMat", scene);
+        tableMat.diffuseColor = new BABYLON.Color3(0.4, 0.3, 0.2);
+        table.material = tableMat;
+
+        this.shopkeepers.push(npc);
+        core.createBlip(npc, "Gold", "shop");
+    },
+
     // --- BOSSES & MECS ---
     spawnSpider: function (scene, x, z, core) {
         BABYLON.SceneLoader.ImportMeshAsync("", "./", "Wasteland_Widow.glb", scene).then((result) => {
@@ -300,6 +344,22 @@ var WastelandNPCs = {
         this.updateHelis(dt, core);
         this.updateBosses(dt, core);
         this.updateHydras(dt, core);
+        this.updateShopkeepers(dt, core);
+    },
+
+    updateShopkeepers: function (dt, core) {
+        this.shopkeepers.forEach(s => {
+            var gH = core.getHeightFast(s.position.x, s.position.z);
+            s.position.y = gH;
+
+            // Look at player if close
+            var dist = BABYLON.Vector3.Distance(s.position, core.vehicle.position);
+            if (dist < 15) {
+                var dir = core.vehicle.position.subtract(s.position);
+                dir.y = 0;
+                s.rotation.y = Math.atan2(dir.x, dir.z);
+            }
+        });
     },
 
     updateFauna: function (dt, core) {
