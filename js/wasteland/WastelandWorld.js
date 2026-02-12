@@ -177,7 +177,10 @@ var WastelandWorld = {
                 door.position.y = 0;
                 door.parent = rock;
                 door.material = vaultMat;
-                ruin = BABYLON.Mesh.MergeMeshes([rock, door], true, true, undefined, false, true);
+
+                // Tag for interaction
+                rock.data = { type: "DUNGEON_ENTRANCE", dungeonId: "vault_" + i };
+                ruin = rock;
                 ruin.material = concreteMat;
                 ruin.position = new BABYLON.Vector3(x, y, z);
             }

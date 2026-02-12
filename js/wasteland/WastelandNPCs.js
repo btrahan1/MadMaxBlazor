@@ -144,8 +144,12 @@ var WastelandNPCs = {
             timer: 0.1,
             origin: new BABYLON.Vector3(x, 0, z),
             target: new BABYLON.Vector3(x + 5, 0, z + 5),
-            animTime: Math.random() * 100
+            animTime: Math.random() * 100,
+            isFeral: false,
+            visualTimer: 0
         };
+        npc.hp = 25;
+        npc.root = npc; // Self-reference for combat system compatibility
 
         var skinMat = new BABYLON.StandardMaterial("skin", scene);
         skinMat.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.5);
@@ -567,7 +571,42 @@ var WastelandNPCs = {
                 }
             }
 
-            if (s.data.state === "walk") {
+            if (s.data.isFeral && WastelandHero.mesh) {
+                // Chase Hero
+                var targetDir = WastelandHero.mesh.position.subtract(s.position);
+                targetDir.y = 0;
+                var dist = targetDir.length();
+                targetDir.normalize();
+
+                if (dist > 2.5) {
+                    s.position.addInPlace(targetDir.scale(4 * dt));
+                    var desiredAngle = Math.atan2(targetDir.x, targetDir.z);
+                    s.rotation.y = BABYLON.Scalar.Lerp(s.rotation.y, desiredAngle, 10 * dt);
+
+                    s.data.animTime += dt * 10;
+                    var sin = Math.sin(s.data.animTime);
+                    s.limbs.la.rotation.x = sin * 0.5; s.limbs.ra.rotation.x = -sin * 0.5;
+                    s.limbs.ll.rotation.x = -sin * 0.5; s.limbs.rl.rotation.x = sin * 0.5;
+                } else {
+                    // Face Hero while attacking
+                    var angle = Math.atan2(targetDir.x, targetDir.z);
+                    s.rotation.y = BABYLON.Scalar.Lerp(s.rotation.y, angle, 10 * dt);
+
+                    // Attack Swing (Visual Only)
+                    if (s.data.visualTimer > 0) {
+                        s.data.visualTimer -= dt * 5;
+                        var swing = Math.sin(s.data.visualTimer * Math.PI);
+                        s.limbs.ra.rotation.x = -1.5 * swing; // Thrust arm
+                        s.limbs.la.rotation.x = 0.5 * swing;
+                    } else {
+                        // Reset Pose
+                        s.limbs.la.rotation.x *= 0.9;
+                        s.limbs.ra.rotation.x *= 0.9;
+                        s.limbs.ll.rotation.x *= 0.9;
+                        s.limbs.rl.rotation.x *= 0.9;
+                    }
+                }
+            } else if (s.data.state === "walk") {
                 var dx = s.data.target.x - s.position.x, dz = s.data.target.z - s.position.z;
                 var dist = Math.sqrt(dx * dx + dz * dz);
                 if (dist < 0.5) s.data.state = "idle";
