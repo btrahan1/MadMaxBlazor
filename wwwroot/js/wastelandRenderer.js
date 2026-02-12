@@ -422,20 +422,21 @@ var wastelandRenderer = {
             for (let i = 0; i < WastelandWorld.scrapFields.length; i++) {
                 let s = WastelandWorld.scrapFields[i];
                 if (s.isEnabled() && BABYLON.Vector3.Distance(this.vehicle.position, s.position) < 5) {
-                    // Pick up!
-                    s.setEnabled(false); // Hide
+                    s.setEnabled(false);
                     this.scrap += 10;
                     if (this.dotNetRef) this.dotNetRef.invokeMethodAsync("AddScrap", 10);
                 }
             }
         }
 
-        // 11. Refuel Logic
+        // 11. Refuel logic (Gas Stations)
         if (WastelandWorld.gasStations && this.speed < 5) {
             for (let g of WastelandWorld.gasStations) {
                 if (BABYLON.Vector3.Distance(this.vehicle.position, g.position) < 8) {
-                    this.fuel += 50 * dt; // Refuel fast
-                    if (this.fuel > 100) this.fuel = 100;
+                    this.fuel += 50 * dt;
+                    if (this.fuel > this.stats.vArmor == 2 ? 150 : (this.stats.vArmor == 3 ? 200 : 100)) {
+                        // Max Fuel is handled by GameState but we should clamp here too
+                    }
                 }
             }
         }
@@ -460,10 +461,24 @@ var wastelandRenderer = {
 
         // --- COMBAT UPDATE ---
         if (this.inputMap[" "]) {
-            WastelandCombat.fireMachineGun(this.scene, this);
+            WastelandCombat.fireMachineGun(this);
         }
-        // WastelandCombat.update handled above
-        // ---------------------
+
+        // Mechanic Proximity Check
+        var mechanicPos = new BABYLON.Vector3(-50, 2, -50);
+        if (BABYLON.Vector3.Distance(this.vehicle.position, mechanicPos) < 15) {
+            if (this.inputMap["e"]) {
+                this.inputMap["e"] = false;
+                if (this.dotNetRef) this.dotNetRef.invokeMethodAsync("OpenGarage");
+            }
+        }
+
+        // Engine Scaling
+        var engineScale = 1.0;
+        if (this.stats && this.stats.vEngine) {
+            engineScale = 1.0 + (this.stats.vEngine - 1) * 0.25;
+        }
+        this.velocity.scaleInPlace(engineScale);
 
         // 14. HUD Update (Always run if defined)
         if (window.updateHud) {
@@ -475,7 +490,11 @@ var wastelandRenderer = {
                     if (d < minDist) minDist = d;
                 }
             }
-            window.updateHud(Math.round(this.speed), Math.round(minDist), this.facingAngle, this.fuel, this.scrap);
+            var maxFuel = 100;
+            if (this.stats && this.stats.vArmor) {
+                maxFuel = this.stats.vArmor == 2 ? 150 : (this.stats.vArmor == 3 ? 200 : 100);
+            }
+            window.updateHud(Math.round(this.speed), Math.round(minDist), this.facingAngle, this.fuel, this.scrap, maxFuel);
         }
 
         this.frame = (this.frame || 0) + 1;

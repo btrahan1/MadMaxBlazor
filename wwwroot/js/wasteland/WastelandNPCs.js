@@ -223,6 +223,34 @@ var WastelandNPCs = {
         core.createBlip(npc, "Gold", "shop");
     },
 
+    spawnFriendlyNPC: function (scene, core) {
+        // Wasteland Trader
+        this.spawnTrader(scene, core);
+
+        // Mechanic (Garage)
+        this.spawnMechanic(scene, core);
+    },
+
+    spawnTrader: function (scene, core) {
+        var trader = BABYLON.MeshBuilder.CreateBox("trader", { size: 4 }, scene);
+        trader.position = new BABYLON.Vector3(50, 2, 50);
+        var mat = new BABYLON.StandardMaterial("tradermat", scene);
+        mat.diffuseColor = new BABYLON.Color3(0, 1, 0);
+        trader.material = mat;
+        trader.data = { type: "TRADER", name: "Trader" };
+        core.radar.addBlip(trader, "TRADER", "lime");
+    },
+
+    spawnMechanic: function (scene, core) {
+        var mechanic = BABYLON.MeshBuilder.CreateBox("mechanic", { size: 4 }, scene);
+        mechanic.position = new BABYLON.Vector3(-50, 2, -50);
+        var mat = new BABYLON.StandardMaterial("mechanicmat", scene);
+        mat.diffuseColor = new BABYLON.Color3(1, 0.5, 0); // Orange
+        mechanic.material = mat;
+        mechanic.data = { type: "MECHANIC", name: "Mechanic" };
+        core.radar.addBlip(mechanic, "GARAGE", "orange");
+    },
+
     // --- BOSSES & MECS ---
     spawnSpider: function (scene, x, z, core) {
         BABYLON.SceneLoader.ImportMeshAsync("", "./", "Wasteland_Widow.glb", scene).then((result) => {

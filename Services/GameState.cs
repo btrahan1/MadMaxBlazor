@@ -35,6 +35,11 @@ namespace MadMaxBlazor.Services
             { "GLOVES", null }
         };
 
+        // Vehicle Upgrades
+        public int VehicleArmorLevel { get; set; } = 1;
+        public int VehicleWeaponLevel { get; set; } = 1;
+        public int VehicleEngineLevel { get; set; } = 1;
+
         public event Action OnChange;
         public event Action OnLevelUp;
 
@@ -103,6 +108,10 @@ namespace MadMaxBlazor.Services
                 { "OFF", null },
                 { "GLOVES", null }
             };
+            VehicleArmorLevel = 1;
+            VehicleWeaponLevel = 1;
+            VehicleEngineLevel = 1;
+            MaxFuel = 100f;
             NotifyStateChanged();
         }
 
@@ -122,6 +131,9 @@ namespace MadMaxBlazor.Services
             Intelligence = other.Intelligence;
             Wisdom = other.Wisdom;
             Charisma = other.Charisma;
+            VehicleArmorLevel = other.VehicleArmorLevel;
+            VehicleWeaponLevel = other.VehicleWeaponLevel;
+            VehicleEngineLevel = other.VehicleEngineLevel;
             Inventory = other.Inventory != null ? new List<Item>(other.Inventory) : new List<Item>();
             if (other.Equipment != null)
             {
@@ -233,6 +245,36 @@ namespace MadMaxBlazor.Services
                 return Equipment["MAIN"].BaseDamage;
             }
             return 0; // Unarmed or no weapon
+        }
+
+        public bool UpgradeVehicleComponent(string component)
+        {
+            int currentLevel = 0;
+            if (component == "ENGINE") currentLevel = VehicleEngineLevel;
+            if (component == "ARMOR") currentLevel = VehicleArmorLevel;
+            if (component == "WEAPONS") currentLevel = VehicleWeaponLevel;
+
+            if (currentLevel >= 3) return false;
+
+            int cost = 0;
+            if (component == "ENGINE") cost = currentLevel == 1 ? 200 : 500;
+            if (component == "ARMOR") cost = currentLevel == 1 ? 150 : 400;
+            if (component == "WEAPONS") cost = currentLevel == 1 ? 300 : 600;
+
+            if (Scrap < cost) return false;
+
+            Scrap -= cost;
+            if (component == "ENGINE") VehicleEngineLevel++;
+            if (component == "ARMOR") 
+            {
+                VehicleArmorLevel++;
+                MaxFuel = VehicleArmorLevel == 2 ? 150f : 200f;
+                Fuel = MaxFuel; // Refill on upgrade
+            }
+            if (component == "WEAPONS") VehicleWeaponLevel++;
+
+            NotifyStateChanged();
+            return true;
         }
 
         private void NotifyStateChanged() => OnChange?.Invoke();
