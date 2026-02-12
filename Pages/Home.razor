@@ -209,18 +209,7 @@
     }
 </div>
 
-@code {
-    RenderFragment renderStat(string name, int val) => __builder => {
-        <div class="stat-row">
-            <span class="stat-name">@name</span>
-            <span class="stat-val">@val</span>
-            @if (State.StatPoints > 0)
-            {
-                <button class="plus-btn" @onclick='() => AllocatePoint(name)'>+</button>
-            }
-        </div>
-    };
-}
+
 
 <script>
     window.updateHud = (speed, dist, hdgRad, fuel, scrap, maxFuel) => {
@@ -622,6 +611,46 @@
 </style>
 
 @code {
+    RenderFragment renderStat(string name, int val) => __builder => {
+        <div class="stat-row">
+            <span class="stat-name">@name</span>
+            <span class="stat-val">@val</span>
+            @if (State.StatPoints > 0)
+            {
+                <button class="plus-btn" @onclick='() => AllocatePoint(name)'>+</button>
+            }
+        </div>
+    };
+
+    RenderFragment renderUpgradePath(string label, int level, string desc)
+    {
+        int cost = level == 1 ? (label == "ARMOR" ? 150 : label == "ENGINE" ? 200 : 300) 
+                           : (label == "ARMOR" ? 400 : label == "ENGINE" ? 500 : 600);
+        bool canAfford = State.Scrap >= cost;
+
+        return __builder => {
+            <div class="path-row">
+                <div class="path-info">
+                    <h3>@label</h3>
+                    <p>@desc</p>
+                </div>
+                <div class="path-ctrl">
+                    <span class="level-indicator">LV @level</span>
+                    @if (level < 3)
+                    {
+                        <button class="upgrade-btn" disabled="@(!canAfford)" @onclick="() => UpgradeVehicle(label)">
+                            UPGRADE (@cost SCRAP)
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="upgrade-btn" disabled>MAXED</button>
+                    }
+                </div>
+            </div>
+        };
+    }
+
     private DotNetObjectReference<Home>? objRef;
     private bool ShowSplash { get; set; } = true;
     private bool ShowPaperdoll { get; set; } = false;
@@ -819,7 +848,10 @@
         { 
             str = State.GetTotalStat("STR"), 
             dex = State.GetTotalStat("DEX"),
-            weaponDamage = State.GetWeaponDamage()
+            weaponDamage = State.GetWeaponDamage(),
+            vArmor = State.VehicleArmorLevel,
+            vWeapon = State.VehicleWeaponLevel,
+            vEngine = State.VehicleEngineLevel
         };
         await JSRuntime.InvokeVoidAsync("wastelandRenderer.updateStats", stats);
     }
@@ -852,36 +884,6 @@
         };
     }
 
-    }
-
-    private RenderFragment renderUpgradePath(string label, int level, string desc)
-    {
-        int cost = level == 1 ? (label == "ARMOR" ? 150 : label == "ENGINE" ? 200 : 300) 
-                           : (label == "ARMOR" ? 400 : label == "ENGINE" ? 500 : 600);
-        bool canAfford = State.Scrap >= cost;
-
-        return __builder => {
-            <div class="path-row">
-                <div class="path-info">
-                    <h3>@label</h3>
-                    <p>@desc</p>
-                </div>
-                <div class="path-ctrl">
-                    <span class="level-indicator">LV @level</span>
-                    @if (level < 3)
-                    {
-                        <button class="upgrade-btn" disabled="@(!canAfford)" @onclick="() => UpgradeVehicle(label)">
-                            UPGRADE (@cost SCRAP)
-                        </button>
-                    }
-                    else
-                    {
-                        <button class="upgrade-btn" disabled>MAXED</button>
-                    }
-                </div>
-            </div>
-        };
-    }
 
     public void Dispose()
     {

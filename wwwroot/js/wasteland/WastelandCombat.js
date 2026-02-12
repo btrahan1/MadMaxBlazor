@@ -19,7 +19,7 @@ var WastelandCombat = {
     },
 
     fireMachineGun: function (core) {
-        if (!core.isDriving) return;
+        if (!core.isDriving || !core.vehicle) return;
         var now = Date.now();
         if (now - this.lastFireTime < 150) return;
         this.lastFireTime = now;
@@ -31,7 +31,8 @@ var WastelandCombat = {
         var createTracer = (pos, dir) => {
             var bullet = this.masterBullet.createInstance("b_" + Date.now());
             bullet.position.copyFrom(pos);
-            bullet.rotation = core.hero.rotationQuaternion ? core.hero.rotationQuaternion.toEulerAngles() : new BABYLON.Vector3(0, core.facingAngle, 0);
+            // Use vehicle rotation as base
+            bullet.rotation = core.vehicle.rotation.clone();
             bullet.rotation.x += Math.PI / 2;
 
             this.projectiles.push({
@@ -42,7 +43,7 @@ var WastelandCombat = {
             });
         };
 
-        // Fire from both or more barrels
+        // Fire from multiple barrels
         for (var i = 0; i < barrelCount; i++) {
             var offset = (i - (barrelCount - 1) / 2) * 0.8;
             var spawnPos = core.vehicle.position.clone();
@@ -53,7 +54,7 @@ var WastelandCombat = {
             spawnPos.addInPlace(right.scale(offset));
 
             var dir = new BABYLON.Vector3(Math.sin(core.facingAngle), 0, Math.cos(core.facingAngle));
-            // Slight spread for outer barrels
+            // Slight spread for extra barrels
             if (i > 0) {
                 dir.x += (Math.random() - 0.5) * 0.05;
                 dir.z += (Math.random() - 0.5) * 0.05;

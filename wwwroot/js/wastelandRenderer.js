@@ -127,11 +127,13 @@ var wastelandRenderer = {
                     if (!targetNPC) {
                         for (var s of WastelandNPCs.shopkeepers) {
                             if (mesh === s || mesh.isDescendantOf(s)) {
-                                console.log("OPENING SHOP!");
+                                var type = (s.data && s.data.type) || "SHOP";
+                                console.log("INTERACTING WITH: " + type);
                                 if (this.dotNetRef) {
-                                    this.dotNetRef.invokeMethodAsync("OpenShop");
+                                    if (type === "GARAGE") this.dotNetRef.invokeMethodAsync("OpenGarage");
+                                    else this.dotNetRef.invokeMethodAsync("OpenShop");
                                 }
-                                return; // Don't engage combat with shopkeeper
+                                return;
                             }
                         }
                     }
@@ -180,8 +182,8 @@ var wastelandRenderer = {
         WastelandNPCs.createSnakes(scene, 10, this);
         WastelandNPCs.createCoyotes(scene, 5, this);
 
-        // Shopkeepers
-        WastelandNPCs.spawnShopkeeper(scene, 50, 50, this); // One at 50, 50
+        // Friendly NPCs (Trader, Mechanic)
+        WastelandNPCs.spawnFriendlyNPC(scene, this);
 
         // Vehicle
         this.createBuggy(scene);
@@ -464,12 +466,17 @@ var wastelandRenderer = {
             WastelandCombat.fireMachineGun(this);
         }
 
-        // Mechanic Proximity Check
-        var mechanicPos = new BABYLON.Vector3(-50, 2, -50);
-        if (BABYLON.Vector3.Distance(this.vehicle.position, mechanicPos) < 15) {
-            if (this.inputMap["e"]) {
-                this.inputMap["e"] = false;
-                if (this.dotNetRef) this.dotNetRef.invokeMethodAsync("OpenGarage");
+        // NPC Proximity Check (Shop/Garage)
+        for (var s of WastelandNPCs.shopkeepers) {
+            if (BABYLON.Vector3.Distance(this.vehicle.position, s.position) < 15) {
+                if (this.inputMap["e"]) {
+                    this.inputMap["e"] = false;
+                    var type = (s.data && s.data.type) || "SHOP";
+                    if (this.dotNetRef) {
+                        if (type === "GARAGE") this.dotNetRef.invokeMethodAsync("OpenGarage");
+                        else this.dotNetRef.invokeMethodAsync("OpenShop");
+                    }
+                }
             }
         }
 
