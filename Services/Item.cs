@@ -9,6 +9,7 @@ namespace MadMaxBlazor.Services
         public string Description { get; set; } = "";
         public string Slot { get; set; } = "NONE"; // HEAD, CHEST, LEGS, MAIN, OFF, NONE
         public int Cost { get; set; } = 0;
+        public int BaseDamage { get; set; } = 0;
         
         // Stats
         public int BonusStr { get; set; } = 0;

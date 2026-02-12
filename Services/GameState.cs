@@ -226,6 +226,15 @@ namespace MadMaxBlazor.Services
             NotifyStateChanged();
         }
 
+        public int GetWeaponDamage()
+        {
+            if (Equipment.ContainsKey("MAIN") && Equipment["MAIN"] != null)
+            {
+                return Equipment["MAIN"].BaseDamage;
+            }
+            return 0; // Unarmed or no weapon
+        }
+
         private void NotifyStateChanged() => OnChange?.Invoke();
     }
 }

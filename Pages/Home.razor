@@ -589,8 +589,8 @@
         new MadMaxBlazor.Services.Item { Name = "Rust-Back Tank", Slot = "BACK", Cost = 120, BonusStr = 2 },
         new MadMaxBlazor.Services.Item { Name = "Spiked Boots", Slot = "FEET", Cost = 60, BonusDex = 2 },
         new MadMaxBlazor.Services.Item { Name = "Motor Goggles", Slot = "HEAD", Cost = 30, BonusDex = 2 },
-        new MadMaxBlazor.Services.Item { Name = "Sawed Off", Slot = "MAIN", Cost = 250, BonusStr = 4 },
-        new MadMaxBlazor.Services.Item { Name = "Machete", Slot = "MAIN", Cost = 100, BonusStr = 2 },
+        new MadMaxBlazor.Services.Item { Name = "Sawed Off", Slot = "MAIN", Cost = 250, BonusStr = 4, BaseDamage = 10 },
+        new MadMaxBlazor.Services.Item { Name = "Machete", Slot = "MAIN", Cost = 100, BonusStr = 2, BaseDamage = 6 },
         new MadMaxBlazor.Services.Item { Name = "Buckler", Slot = "OFF", Cost = 80, BonusCon = 2 },
         new MadMaxBlazor.Services.Item { Name = "Leather Chaps", Slot = "LEGS", Cost = 70, BonusDex = 3 },
         new MadMaxBlazor.Services.Item { Name = "Welder's Gloves", Slot = "GLOVES", Cost = 40, BonusDex = 2 }
@@ -659,6 +659,7 @@
     {
         State.EquipItem(item);
         await Persistence.SaveGame(State);
+        await UpdateJSStats();
         StateHasChanged();
     }
 
@@ -666,6 +667,7 @@
     {
         State.UnequipItem(slot);
         await Persistence.SaveGame(State);
+        await UpdateJSStats();
         StateHasChanged();
     }
 
@@ -684,6 +686,7 @@
         }
         State.StatPoints--;
         await Persistence.SaveGame(State);
+        await UpdateJSStats();
         StateHasChanged();
     }
 
@@ -735,7 +738,19 @@
         {
             objRef = DotNetObjectReference.Create(this);
             await JSRuntime.InvokeVoidAsync("wastelandRenderer.init", "renderCanvas", objRef);
+            await UpdateJSStats();
         }
+    }
+
+    private async Task UpdateJSStats()
+    {
+        var stats = new 
+        { 
+            str = State.GetTotalStat("STR"), 
+            dex = State.GetTotalStat("DEX"),
+            weaponDamage = State.GetWeaponDamage()
+        };
+        await JSRuntime.InvokeVoidAsync("wastelandRenderer.updateStats", stats);
     }
 
     [JSInvokable]
@@ -750,6 +765,17 @@
     {
         State.AddScrap(amount);
         await Persistence.SaveGame(State);
+    }
+
+    [JSInvokable]
+    public object GetCombatStats()
+    {
+        return new 
+        { 
+            str = State.GetTotalStat("STR"), 
+            dex = State.GetTotalStat("DEX"),
+            weaponDamage = State.GetWeaponDamage()
+        };
     }
 
     public void Dispose()
