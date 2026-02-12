@@ -61,8 +61,13 @@ var WastelandCombatUI = {
         if (!this.advancedTexture) return;
 
         var text = new BABYLON.GUI.TextBlock();
-        text.text = "-" + amount;
-        text.color = "red";
+        if (amount === "MISS") {
+            text.text = "MISS";
+            text.color = "gray";
+        } else {
+            text.text = "-" + amount;
+            text.color = "red";
+        }
         text.fontSize = 28;
         text.fontWeight = "bold";
         text.outlineColor = "white";

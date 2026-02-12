@@ -178,15 +178,30 @@ var WastelandCombat = {
                 var e = this.enemies[j];
                 if (BABYLON.Vector3.Distance(p.mesh.position, e.position) < 5.0) {
                     p.mesh.dispose(); this.projectiles.splice(i, 1);
-                    e.data.hp--;
-                    if (e.data.hp <= 0) this.destroyEnemy(e, j, core);
+
+                    // Stats-based Hit (Synchronous now via core.stats)
+                    var stats = core.stats || { dex: 10, str: 10, weaponDamage: 0 };
+                    var hitChance = 75 + stats.dex;
+
+                    if (Math.random() * 100 < hitChance) {
+                        // REVERT: Car combat should be simple 1-HP loss for now
+                        e.data.hp--;
+                        WastelandCombatUI.showDamage(e, 1);
+                        if (e.data.hp <= 0) this.destroyEnemy(e, core); // Pass core, not j
+                    } else {
+                        WastelandCombatUI.showDamage(e, "MISS");
+                    }
                     break;
                 }
             }
         }
     },
 
-    destroyEnemy: function (enemy, index, core) {
+    destroyEnemy: function (enemy, core) {
+        // Find index reliably
+        var index = this.enemies.indexOf(enemy);
+        if (index === -1) return;
+
         var scene = core.scene;
         var explosion = new BABYLON.ParticleSystem("expl", 200, scene);
         explosion.particleTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/flare.png", scene);

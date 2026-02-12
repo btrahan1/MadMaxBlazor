@@ -137,28 +137,35 @@ var WastelandHero = {
                     if (this.combatTurn === 0) {
                         // Hero Turn
                         this.swingTimer = 1.0;
-                        var heroDmg = 5 + Math.floor(Math.random() * 6); // 5-10
-                        this.combatTarget.hp -= heroDmg;
-                        console.log("Hero swings for " + heroDmg + "! (Target HP: " + this.combatTarget.hp + ")");
 
-                        // UI: Damage Number & Health Bar
-                        WastelandCombatUI.showDamage(targetMesh, heroDmg);
-                        WastelandCombatUI.updateHealthBar(targetMesh, (this.combatTarget.hp / 25) * 100);
+                        var stats = core.stats || { dex: 10, str: 10, weaponDamage: 0 };
+                        var hitChance = 75 + stats.dex;
 
+                        if (Math.random() * 100 < hitChance) {
+                            var bonusDmg = Math.floor(stats.str / 2 + Math.random() * (stats.str / 2));
+                            var heroDmg = stats.weaponDamage + bonusDmg;
+                            this.combatTarget.hp -= heroDmg;
+                            console.log("Hero hits for " + heroDmg);
+                            WastelandCombatUI.showDamage(targetMesh, heroDmg);
+                            WastelandCombatUI.updateHealthBar(targetMesh, (this.combatTarget.hp / 25) * 100);
+                        } else {
+                            WastelandCombatUI.showDamage(targetMesh, "MISS");
+                        }
                         this.combatTurn = 1;
                     } else {
                         // NPC Turn
-                        var npcDmg = 3 + Math.floor(Math.random() * 4); // 3-6
-                        this.hp -= npcDmg;
-                        console.log("NPC attacks for " + npcDmg + "! (Hero HP: " + this.hp + ")");
-
-                        // UI: Damage Number & Health Bar
-                        WastelandCombatUI.showDamage(this.mesh, npcDmg);
-                        WastelandCombatUI.updateHealthBar(this.mesh, this.hp); // Hero max is 100
+                        var hitChance = 75; // NPCs have base 75%
+                        if (Math.random() * 100 < hitChance) {
+                            var npcDmg = 3 + Math.floor(Math.random() * 4); // 3-6
+                            this.hp -= npcDmg;
+                            WastelandCombatUI.showDamage(this.mesh, npcDmg);
+                            WastelandCombatUI.updateHealthBar(this.mesh, this.hp);
+                        } else {
+                            WastelandCombatUI.showDamage(this.mesh, "MISS");
+                        }
 
                         // Signal NPC to lunge
                         this.combatTarget.visualTimer = 1.0;
-
                         this.combatTurn = 0;
                     }
 

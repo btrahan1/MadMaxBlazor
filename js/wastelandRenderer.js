@@ -11,6 +11,11 @@ var wastelandRenderer = {
     speedRatio: 0.5,
     isDriving: true,
     lastSpawnTime: 0,
+    stats: { str: 10, dex: 10, weaponDamage: 0 },
+
+    updateStats: function (s) {
+        this.stats = s;
+    },
 
     setSpeedRatio: function (val) {
         // Map 1-100 to 0.25 - 1.0
