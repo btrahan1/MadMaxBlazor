@@ -18,32 +18,49 @@ var WastelandCombat = {
         this.projectiles = [];
     },
 
-    fireMachineGun: function (scene, core) {
-        if (!this.masterBullet) this.init(scene);
-
+    fireMachineGun: function (core) {
+        if (!core.isDriving || !core.vehicle) return;
         var now = Date.now();
-        if (now - this.lastFireTime < 100) return;
+        if (now - this.lastFireTime < 150) return;
         this.lastFireTime = now;
 
-        var createBullet = (gunNode) => {
-            var bullet = this.masterBullet.createInstance("b_" + now);
-            var pos = gunNode.getAbsolutePosition();
-            bullet.position.copyFrom(pos);
-            bullet.rotation.y = -core.facingAngle;
+        var stats = core.stats || { vWeapon: 1 };
+        var weaponLevel = stats.vWeapon || 1;
+        var barrelCount = weaponLevel + 1; // L1: 2, L2: 3, L3: 4
 
-            var speed = 200;
-            var dir = new BABYLON.Vector3(Math.sin(core.facingAngle), 0, Math.cos(core.facingAngle));
+        var createTracer = (pos, dir) => {
+            var bullet = this.masterBullet.createInstance("b_" + Date.now());
+            bullet.position.copyFrom(pos);
+            // Use vehicle rotation as base
+            bullet.rotation = core.vehicle.rotation.clone();
+            bullet.rotation.x += Math.PI / 2;
 
             this.projectiles.push({
                 mesh: bullet,
                 direction: dir,
-                speed: speed,
-                life: 2.0
+                speed: 200,
+                life: 1.5
             });
         };
 
-        createBullet(core.leftGun);
-        createBullet(core.rightGun);
+        // Fire from multiple barrels
+        for (var i = 0; i < barrelCount; i++) {
+            var offset = (i - (barrelCount - 1) / 2) * 0.8;
+            var spawnPos = core.vehicle.position.clone();
+            spawnPos.y += 2;
+
+            // Side offset based on facing
+            var right = new BABYLON.Vector3(Math.cos(core.facingAngle), 0, -Math.sin(core.facingAngle));
+            spawnPos.addInPlace(right.scale(offset));
+
+            var dir = new BABYLON.Vector3(Math.sin(core.facingAngle), 0, Math.cos(core.facingAngle));
+            // Slight spread for extra barrels
+            if (i > 0) {
+                dir.x += (Math.random() - 0.5) * 0.05;
+                dir.z += (Math.random() - 0.5) * 0.05;
+            }
+            createTracer(spawnPos, dir);
+        }
     },
 
     createEnemyBuggy: function (scene, x, z, core) {

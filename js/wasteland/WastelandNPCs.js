@@ -223,6 +223,90 @@ var WastelandNPCs = {
         core.createBlip(npc, "Gold", "shop");
     },
 
+    spawnFriendlyNPC: function (scene, core) {
+        // Wasteland Trader
+        this.spawnTrader(scene, core);
+
+        // Mechanic (Garage)
+        this.spawnMechanic(scene, core);
+    },
+
+    spawnTrader: function (scene, core) {
+        var x = 50, z = 50;
+        var npc = new BABYLON.TransformNode("trader_root", scene);
+        var gH = core.getHeightAt(x, z);
+        npc.position = new BABYLON.Vector3(x, gH, z);
+
+        // Character Visuals (similar to shopkeeper)
+        var clothMat = new BABYLON.StandardMaterial("traderCloth", scene);
+        clothMat.diffuseColor = new BABYLON.Color3(0.2, 0.6, 0.2); // Greenish
+        var skinMat = new BABYLON.StandardMaterial("traderSkin", scene);
+        skinMat.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.4);
+
+        var torso = BABYLON.MeshBuilder.CreateBox("torso", { width: 0.6, height: 0.8, depth: 0.4 }, scene);
+        torso.parent = npc; torso.position.y = 1.2; torso.material = clothMat;
+        var head = BABYLON.MeshBuilder.CreateSphere("head", { diameter: 0.4 }, scene);
+        head.parent = torso; head.position.y = 0.6; head.material = skinMat;
+
+        // Large Merchant Hat
+        var hat = BABYLON.MeshBuilder.CreateCylinder("hat", { diameterTop: 0.8, diameterBottom: 0.8, height: 0.1 }, scene);
+        hat.parent = head; hat.position.y = 0.2; hat.material = clothMat;
+
+        // Stall
+        var stall = BABYLON.MeshBuilder.CreateBox("stall", { width: 3, height: 1.2, depth: 1.5 }, scene);
+        stall.parent = npc; stall.position = new BABYLON.Vector3(0, 0.6, 1.2);
+        var stallMat = new BABYLON.StandardMaterial("stallMat", scene);
+        stallMat.diffuseColor = new BABYLON.Color3(0.4, 0.3, 0.2);
+        stall.material = stallMat;
+
+        npc.data = { type: "SHOP", name: "Trader" };
+        this.shopkeepers.push(npc);
+        core.createBlip(npc, "Lime", "shop");
+    },
+
+    spawnMechanic: function (scene, core) {
+        var x = -50, z = -50;
+        var npc = new BABYLON.TransformNode("mechanic_root", scene);
+        var gH = core.getHeightAt(x, z);
+        npc.position = new BABYLON.Vector3(x, gH, z);
+
+        // Character Visuals
+        var clothMat = new BABYLON.StandardMaterial("mechCloth", scene);
+        clothMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3); // Greasy Grey
+        var skinMat = new BABYLON.StandardMaterial("mechSkin", scene);
+        skinMat.diffuseColor = new BABYLON.Color3(0.7, 0.5, 0.3);
+
+        var torso = BABYLON.MeshBuilder.CreateBox("torso", { width: 0.7, height: 0.9, depth: 0.4 }, scene);
+        torso.parent = npc; torso.position.y = 1.2; torso.material = clothMat;
+        var head = BABYLON.MeshBuilder.CreateSphere("head", { diameter: 0.45 }, scene);
+        head.parent = torso; head.position.y = 0.6; head.material = skinMat;
+
+        // Welding Mask
+        var mask = BABYLON.MeshBuilder.CreateBox("mask", { width: 0.3, height: 0.4, depth: 0.1 }, scene);
+        mask.parent = head; mask.position = new BABYLON.Vector3(0, 0, 0.2);
+        var maskMat = new BABYLON.StandardMaterial("maskMat", scene);
+        maskMat.diffuseColor = BABYLON.Color3.Black();
+        mask.material = maskMat;
+
+        // Workbench
+        var bench = BABYLON.MeshBuilder.CreateBox("workbench", { width: 2.5, height: 1, depth: 1.2 }, scene);
+        bench.parent = npc; bench.position = new BABYLON.Vector3(0, 0.5, 1.2);
+        var benchMat = new BABYLON.StandardMaterial("benchMat", scene);
+        benchMat.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.25);
+        bench.material = benchMat;
+
+        // Engine Part on bench
+        var enginePart = BABYLON.MeshBuilder.CreateBox("enginePart", { size: 0.6 }, scene);
+        enginePart.parent = bench; enginePart.position.y = 0.8;
+        var partMat = new BABYLON.StandardMaterial("partMat", scene);
+        partMat.diffuseColor = new BABYLON.Color3(0.6, 0.6, 0.6);
+        enginePart.material = partMat;
+
+        npc.data = { type: "GARAGE", name: "Mechanic" };
+        this.shopkeepers.push(npc);
+        core.createBlip(npc, "Orange", "mechanic");
+    },
+
     // --- BOSSES & MECS ---
     spawnSpider: function (scene, x, z, core) {
         BABYLON.SceneLoader.ImportMeshAsync("", "./", "Wasteland_Widow.glb", scene).then((result) => {
