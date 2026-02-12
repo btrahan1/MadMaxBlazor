@@ -182,6 +182,7 @@ var WastelandNPCs = {
         bagMat.diffuseColor = new BABYLON.Color3(0.3, 0.4, 0.2); bag.material = bagMat;
 
         this.survivors.push(npc);
+        return npc;
     },
 
     spawnShopkeeper: function (scene, x, z, core) {

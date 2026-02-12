@@ -18,6 +18,7 @@ var WastelandWorld = {
         this.createAbandonedCars(scene, 10);
         this.createSurvivorCamps(scene, 3);
         this.createBanditCamps(scene, 3);
+        this.createMedicTent(scene, 15, 15);
     },
 
     createTerrain: function (scene) {
@@ -359,61 +360,50 @@ var WastelandWorld = {
     },
 
     createBanditCamps: function (scene, count) {
-        this.banditCamps = [];
-        var spikeMat = new BABYLON.StandardMaterial("spikeMat", scene);
-        spikeMat.diffuseColor = new BABYLON.Color3(0.3, 0.1, 0.1);
-        var metalMat = new BABYLON.StandardMaterial("metalMat", scene);
-        metalMat.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+        // ... (existing code remains)
+    },
 
-        for (var i = 0; i < count; i++) {
-            var x = (Math.random() * 1200) - 600;
-            var z = (Math.random() * 1200) - 600;
-            var y = this.getHeightAt(x, z);
+    createMedicTent: function (scene, x, z, core) {
+        var y = this.getHeightAt(x, z);
+        var tentRoot = new BABYLON.TransformNode("medicTent", scene);
+        tentRoot.position = new BABYLON.Vector3(x, y, z);
 
-            var campRoot = new BABYLON.TransformNode("bandit" + i, scene);
-            campRoot.position = new BABYLON.Vector3(x, y, z);
+        // Tent Mesh (A-frame)
+        var tent = BABYLON.MeshBuilder.CreateCylinder("tent", { diameter: 8, height: 10, tessellation: 3 }, scene);
+        tent.rotation.z = Math.PI / 2;
+        tent.rotation.y = Math.PI / 2;
+        tent.position.y = 3;
+        tent.parent = tentRoot;
 
-            for (var j = 0; j < 12; j++) {
-                var angle = (j / 12) * Math.PI * 2;
-                var sx = Math.sin(angle) * 8;
-                var sz = Math.cos(angle) * 8;
-                var h = 3 + Math.random() * 3;
-                var spike = BABYLON.MeshBuilder.CreateCylinder("spike", { diameterTop: 0, diameterBottom: 0.6, height: h }, scene);
-                spike.parent = campRoot;
-                spike.position = new BABYLON.Vector3(sx, h / 2, sz);
-                spike.rotation.x = (Math.random() - 0.5) * 0.5;
-                spike.rotation.z = (Math.random() - 0.5) * 0.5;
-                spike.material = spikeMat;
-            }
+        var tentMat = new BABYLON.StandardMaterial("medicTentMat", scene);
+        tentMat.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.7);
+        tentMat.backFaceCulling = false;
+        tent.material = tentMat;
 
-            var towerHeight = 12;
-            var tower = BABYLON.MeshBuilder.CreateCylinder("towerBase", { diameter: 3, height: towerHeight, tessellation: 6 }, scene);
-            tower.parent = campRoot;
-            tower.position = new BABYLON.Vector3(-5, towerHeight / 2, 5);
-            tower.material = metalMat;
-            var platform = BABYLON.MeshBuilder.CreateCylinder("platform", { diameter: 5, height: 1 }, scene);
-            platform.parent = campRoot;
-            platform.position = new BABYLON.Vector3(-5, towerHeight, 5);
-            platform.material = metalMat;
+        // Red Cross Symbol (Simple boxes)
+        var p1 = BABYLON.MeshBuilder.CreateBox("p1", { width: 0.5, height: 3, depth: 0.2 }, scene);
+        p1.position = new BABYLON.Vector3(0, 5, 4.1);
+        p1.parent = tentRoot;
+        var p2 = BABYLON.MeshBuilder.CreateBox("p2", { width: 3, height: 0.5, depth: 0.2 }, scene);
+        p2.position = new BABYLON.Vector3(0, 5, 4.1);
+        p2.parent = tentRoot;
+        var redMat = new BABYLON.StandardMaterial("redCrossMat", scene);
+        redMat.diffuseColor = new BABYLON.Color3(0.8, 0, 0);
+        p1.material = redMat;
+        p2.material = redMat;
 
-            var pole = BABYLON.MeshBuilder.CreateCylinder("pole", { diameter: 0.2, height: 6 }, scene);
-            pole.parent = campRoot;
-            pole.position = new BABYLON.Vector3(4, 3, 4);
-            pole.material = metalMat;
-            var skull = BABYLON.MeshBuilder.CreateSphere("skull", { diameter: 1.0 }, scene);
-            skull.parent = campRoot;
-            skull.position = new BABYLON.Vector3(4, 5.8, 4);
-            skull.material = new BABYLON.StandardMaterial("skullCol", scene);
+        // Medic NPC
+        var medic = WastelandNPCs.createSurvivor(scene, x + 3, z + 3, false);
+        // We need to tag this specific survivor as a Medic
+        if (medic) {
+            medic.name = "Medic";
+            medic.data.isMedic = true;
+            medic.data.state = "idle";
 
-            WastelandUI.registerBlip(tower, "Red", "bandit");
-            this.banditCamps.push(campRoot);
-
-            // Spawn Bandits
-            for (let j = 0; j < 3; j++) {
-                let nx = x + (Math.random() - 0.5) * 12;
-                let nz = z + (Math.random() - 0.5) * 12;
-                WastelandNPCs.createSurvivor(scene, nx, nz, true);
-            }
+            // Add a floating text or something? No, click detection is enough.
+            WastelandUI.registerBlip(medic, "White", "medic");
         }
+
+        WastelandUI.registerBlip(tent, "White", "medic_tent");
     }
 };

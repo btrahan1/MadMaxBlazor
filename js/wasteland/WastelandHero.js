@@ -3,6 +3,15 @@ var WastelandHero = {
     mesh: null,
     limbs: {},
     hp: 100,
+    stamina: 100,
+    mana: 100,
+    skills: {
+        "CRUSH": { cooldown: 0, nextUse: 0, active: false, staminaCost: 25, manaCost: 0 },
+        "SHOCK": { cooldown: 0, nextUse: 0, active: false, staminaCost: 0, manaCost: 30 },
+        "HEAL": { cooldown: 0, nextUse: 0, active: false, staminaCost: 0, manaCost: 0 } // Cost is dynamic (wisdom)
+    },
+    lastStaminaRegen: 0,
+    lastManaRegen: 0,
     combatTarget: null,
     combatTurn: 0, // 0: Hero, 1: NPC
     combatTimer: 0,
@@ -150,17 +159,41 @@ var WastelandHero = {
                         this.swingTimer = 1.0;
 
                         var stats = core.stats || { dex: 10, str: 10, weaponDamage: 0 };
+                        var stats = core.stats || { dex: 10, str: 10, int: 10, weaponDamage: 0 };
                         var hitChance = 75 + stats.dex;
 
                         if (Math.random() * 100 < hitChance) {
                             var bonusDmg = Math.floor(stats.str / 2 + Math.random() * (stats.str / 2));
-                            var heroDmg = stats.weaponDamage + bonusDmg;
-                            this.combatTarget.hp -= heroDmg;
-                            console.log("Hero hits for " + heroDmg);
-                            WastelandCombatUI.showDamage(targetMesh, heroDmg);
+                            var baseDmg = stats.weaponDamage + bonusDmg;
+                            var finalDmg = baseDmg;
+
+                            // Skill Multiplier (Crush)
+                            if (this.skills["CRUSH"].active) {
+                                finalDmg *= 2;
+                                this.skills["CRUSH"].active = false;
+                                console.log("CRUSHING BLOW!");
+                                WastelandCombatUI.showDamage(targetMesh, "CRUSH!");
+                            }
+
+                            // Spell Logic (Shock)
+                            if (this.skills["SHOCK"].active) {
+                                this.skills["SHOCK"].active = false;
+                                var intel = stats.int || 10;
+                                var shockDmg = intel + Math.floor(Math.random() * (intel / 2));
+                                finalDmg += shockDmg;
+                                console.log("SHOCKING STRIKE! " + shockDmg);
+                                WastelandCombatUI.showDamage(targetMesh, "SHOCK!");
+                            }
+
+                            this.combatTarget.hp -= finalDmg;
+                            console.log("Hero hits for " + finalDmg);
+                            WastelandCombatUI.showDamage(targetMesh, finalDmg);
                             WastelandCombatUI.updateHealthBar(targetMesh, (this.combatTarget.hp / 25) * 100);
                         } else {
                             WastelandCombatUI.showDamage(targetMesh, "MISS");
+                            // Skill is consumed even on miss? User didn't specify, but usually yes for stamina based skills.
+                            this.skills["CRUSH"].active = false;
+                            this.skills["SHOCK"].active = false;
                         }
                         this.combatTurn = 1;
                     } else {
@@ -170,6 +203,9 @@ var WastelandHero = {
                             var npcDmg = 3 + Math.floor(Math.random() * 4); // 3-6
                             this.hp -= npcDmg;
                             WastelandCombatUI.showDamage(this.mesh, npcDmg);
+                            if (core.dotNetRef) {
+                                core.dotNetRef.invokeMethodAsync("UpdateHealth", this.hp);
+                            }
                             WastelandCombatUI.updateHealthBar(this.mesh, this.hp);
                         } else {
                             WastelandCombatUI.showDamage(this.mesh, "MISS");
@@ -241,6 +277,51 @@ var WastelandHero = {
             }
         }
 
+        // Show/Hide Skill UI
+        WastelandCombatUI.showSkillUI(this.combatTarget !== null);
+
+        if (this.combatTarget) {
+            var maxStam = (core.stats && core.stats.maxStamina) || 100;
+            var maxMana = (core.stats && core.stats.maxMana) || 100;
+            WastelandCombatUI.updateHealthBar(this.mesh, this.hp);
+            WastelandCombatUI.updateStaminaBar(this.mesh, (this.stamina / maxStam) * 100);
+            WastelandCombatUI.updateManaBar(this.mesh, (this.mana / maxMana) * 100);
+        } else {
+            WastelandCombatUI.removeStaminaBar(this.mesh);
+            WastelandCombatUI.removeManaBar(this.mesh);
+        }
+
+        // --- STAMINA & MANA & SKILL UPDATES ---
+        var now = Date.now();
+        if (now - this.lastStaminaRegen > 1000) {
+            this.lastStaminaRegen = now;
+            var maxStam = (core.stats && core.stats.maxStamina) || 100;
+            var maxMana = (core.stats && core.stats.maxMana) || 100;
+
+            // CHALLENGE MODE: No automatic regeneration.
+            // Players must visit the Medic Tent or use spells.
+
+            // Sync to C# if anything changed (though nothing changes automatically now)
+            if (core.dotNetRef) {
+                // We keep this call just in case other JS logic modifies vitals
+                // core.dotNetRef.invokeMethodAsync("UpdateHealth", this.hp);
+                // core.dotNetRef.invokeMethodAsync("UpdateStamina", this.stamina);
+                // core.dotNetRef.invokeMethodAsync("UpdateMana", this.mana);
+            }
+        }
+
+        // update cooldowns
+        for (var key in this.skills) {
+            var s = this.skills[key];
+            if (s.nextUse > now) {
+                var remaining = (s.nextUse - now) / 1000;
+                var pct = (remaining / 10) * 100; // 10s base
+                WastelandCombatUI.updateCooldown(key, pct);
+            } else {
+                WastelandCombatUI.updateCooldown(key, 0);
+            }
+        }
+
         // Tank Style Controls
         var moveVector = BABYLON.Vector3.Zero();
         var turnSpeed = 3.0 * dt;
@@ -297,11 +378,72 @@ var WastelandHero = {
 
     revive: function (core) {
         this.hp = 100;
+        this.stamina = (core.stats && core.stats.maxStamina) || 100;
+        this.mana = (core.stats && core.stats.maxMana) || 100;
         this.sentDeathSignal = false;
         if (this.mesh) {
             this.mesh.rotation.z = 0;
             this.mesh.setEnabled(true);
         }
         this.combatTarget = null;
+    },
+
+    invokeSkill: function (id, core) {
+        var skill = this.skills[id];
+        if (!skill) return;
+
+        var now = Date.now();
+        if (now < skill.nextUse) {
+            console.log(id + " on cooldown!");
+            return;
+        }
+
+        if (this.stamina < skill.staminaCost) {
+            console.log("Not enough stamina for " + id);
+            return;
+        }
+        if (this.mana < (skill.manaCost || 0)) {
+            console.log("Not enough mana for " + id);
+            return;
+        }
+
+        // Special Case: HEAL
+        if (id === "HEAL") {
+            var wis = core.stats.wis || 10;
+            if (this.mana < wis) {
+                console.log("Not enough mana for HEAL");
+                return;
+            }
+            if (this.hp >= 100) return;
+
+            console.log("CASTING HEAL");
+            this.mana -= wis;
+            this.hp += wis;
+            if (this.hp > 100) this.hp = 100;
+
+            WastelandCombatUI.showDamage(this.mesh, "HEALED!");
+
+            // Sync to C#
+            if (core.dotNetRef) {
+                core.dotNetRef.invokeMethodAsync("UpdateHealth", this.hp);
+                core.dotNetRef.invokeMethodAsync("UpdateMana", this.mana);
+            }
+
+            skill.nextUse = now + 10000;
+            return;
+        }
+
+        console.log("INVOKING " + id);
+        this.stamina -= skill.staminaCost;
+        this.mana -= (skill.manaCost || 0);
+
+        // Sync to C# immediately so UI shows resource drop
+        if (core.dotNetRef) {
+            core.dotNetRef.invokeMethodAsync("UpdateStamina", this.stamina);
+            core.dotNetRef.invokeMethodAsync("UpdateMana", this.mana);
+        }
+
+        skill.nextUse = now + 10000; // 10s Cooldown
+        skill.active = true;
     }
 };
