@@ -11,10 +11,15 @@ var wastelandRenderer = {
     speedRatio: 0.5,
     isDriving: true,
     lastSpawnTime: 0,
-    stats: { str: 10, dex: 10, weaponDamage: 0 },
+    stats: { str: 10, dex: 10, int: 10, wis: 10, weaponDamage: 0, stamina: 100, maxStamina: 100, mana: 100, maxMana: 100 },
 
     updateStats: function (s) {
         this.stats = s;
+        if (typeof WastelandHero !== 'undefined' && WastelandHero) {
+            if (s.hp !== undefined) WastelandHero.hp = s.hp;
+            if (s.stamina !== undefined) WastelandHero.stamina = s.stamina;
+            if (s.mana !== undefined) WastelandHero.mana = s.mana;
+        }
     },
 
     setSpeedRatio: function (val) {
@@ -134,6 +139,14 @@ var wastelandRenderer = {
                         }
                     }
 
+                    if (targetNPC && targetNPC.data && targetNPC.data.isMedic) {
+                        // Open Medic UI
+                        if (this.dotNetRef) {
+                            this.dotNetRef.invokeMethodAsync("OpenMedicUI");
+                        }
+                        return;
+                    }
+
                     if (!targetNPC) {
                         for (var s of WastelandNPCs.shopkeepers) {
                             if (mesh === s || mesh.isDescendantOf(s)) {
@@ -169,6 +182,10 @@ var wastelandRenderer = {
                     }
 
                     if (targetNPC) {
+                        // Prevent engaging friendly NPCs
+                        if (targetNPC.data && (targetNPC.data.isMedic || targetNPC.data.isShopkeeper || targetNPC.data.isFriendly)) {
+                            return;
+                        }
                         console.log("COMBAT ENGAGED!");
                         WastelandHero.combatTarget = targetNPC;
                         if (targetNPC.data) targetNPC.data.isFeral = true;
@@ -650,5 +667,23 @@ var wastelandRenderer = {
         }
 
         console.log("Player Respawned at: " + rx + ", " + rz);
+    },
+    updateHeroHP: function (hp, mana, stamina) {
+        if (typeof WastelandHero !== 'undefined' && WastelandHero) {
+            WastelandHero.hp = hp;
+            WastelandHero.mana = mana;
+            if (stamina !== undefined) WastelandHero.stamina = stamina;
+
+            // Force UI update if in combat
+            if (WastelandHero.combatTarget) {
+                WastelandCombatUI.updateHealthBar(WastelandHero.mesh, hp);
+                // Mana and Stamina bars are handled in the main WastelandHero cycle to avoid duplicate GUI updates
+            }
+        }
+    },
+
+    dotNetRef: null,
+    setDotNetRef: function (ref) {
+        this.dotNetRef = ref;
     }
 };

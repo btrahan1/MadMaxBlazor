@@ -89,6 +89,27 @@
                             }
                         </div>
 
+                        <div class="vitals-card">
+                            <div class="vital-row">
+                                <span class="vital-label">HP</span>
+                                <div class="vital-bar-bg red"><div class="vital-bar" style="width: @(State.Water)%;"></div></div>
+                                <span class="vital-val">@State.Water / 100</span>
+                            </div>
+                            <div class="vital-row">
+                                <span class="vital-label">STAM</span>
+                                <div class="vital-bar-bg yellow"><div class="vital-bar" style="width: @(State.Stamina)%;"></div></div>
+                                <span class="vital-val">@State.Stamina / @State.MaxStamina</span>
+                            </div>
+                            <div class="vital-row">
+                                <span class="vital-label">MANA</span>
+                                <div class="vital-bar-bg blue"><div class="vital-bar" style="width: @(State.Mana)%;"></div></div>
+                                <span class="vital-val">@State.Mana / @State.MaxMana</span>
+                            </div>
+                            <button class="spell-btn heal" @onclick="CastHealInUI" disabled="@(State.Mana < State.GetTotalStat("WIS") || State.Water >= 100)">
+                                🩹 CAST HEAL (@State.GetTotalStat("WIS") MANA)
+                            </button>
+                        </div>
+
                         <div class="stats-list">
                             @renderStat("STR", State.GetTotalStat("STR"))
                             @renderStat("DEX", State.GetTotalStat("DEX"))
@@ -101,6 +122,10 @@
                                 <span class="stat-val" style="color: gold;">@State.Scrap</span>
                             </div>
                         </div>
+
+                        <button class="menu-btn secondary exit-btn" style="margin-top: 20px; width: 100%; height: 40px; font-size: 14px;" @onclick="HandleExitGame">
+                            🔴 EXIT TO MENU (FORCE SAVE)
+                        </button>
                     </div>
 
                     <div class="equipment-card">
@@ -134,6 +159,42 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    }
+
+    @if (ShowMedic)
+    {
+        <div class="medic-overlay">
+            <div class="medic-window">
+                <div class="medic-header">
+                    <h2>🩺 WASTELAND MEDIC</h2>
+                    <button class="close-btn" @onclick="() => ShowMedic = false">X</button>
+                </div>
+                
+                <p>You look like hell, survivor. I can patch you up, but it'll cost ya.</p>
+
+                <div class="medic-cost">
+                    @{
+                        int cost = (100 - State.Water) + (State.MaxStamina - State.Stamina) + (State.MaxMana - State.Mana);
+                    }
+                    @if (cost > 0)
+                    {
+                        <span>REQUIRED SCRAP: <b>@cost</b></span>
+                    }
+                    else
+                    {
+                        <span style="color: #00ff00;">YOU'RE IN TIP-TOP SHAPE!</span>
+                    }
+                </div>
+
+                <button class="refill-btn" 
+                        disabled="@(cost <= 0 || State.Scrap < cost)" 
+                        @onclick="HandleRefill">
+                    @(State.Scrap < cost ? "NOT ENOUGH SCRAP" : "REFILL ALL VITALS")
+                </button>
+
+                <p class="medic-hint">Rate: 1 Scrap per missing point of Health, Stamina, or Mana.</p>
             </div>
         </div>
     }
@@ -565,6 +626,26 @@
         to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     }
 
+    /* Medic Styles */
+    .medic-overlay {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 450;
+        backdrop-filter: blur(8px);
+    }
+    .medic-window {
+        width: 450px; background: #1a1a1a; border: 3px solid #ff3333; padding: 25px; color: white;
+        font-family: 'Courier New', monospace; box-shadow: 0 0 30px rgba(255,51,51,0.3);
+    }
+    .medic-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ff3333; margin-bottom: 20px; }
+    .medic-cost { font-size: 18px; color: gold; margin: 15px 0; text-align: center; }
+    .refill-btn {
+        width: 100%; padding: 15px; background: #ff3333; color: white; border: none; font-size: 20px; font-weight: bold; cursor: pointer;
+        transition: transform 0.1s;
+    }
+    .refill-btn:hover:not(:disabled) { background: #ff5555; transform: scale(1.02); }
+    .refill-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+    .medic-hint { font-size: 12px; color: #888; text-align: center; margin-top: 10px; }
+
     /* Death Overlay */
     .death-overlay {
         position: absolute;
@@ -581,6 +662,16 @@
         text-align: center;
         color: white;
         font-family: 'Courier New', monospace;
+    }
+
+    .exit-btn {
+        background: #440000 !important;
+        border: 1px solid #880000 !important;
+        color: #ffaaaa !important;
+    }
+    .exit-btn:hover {
+        background: #880000 !important;
+        color: white !important;
     }
     .death-title {
         font-size: 80px;
@@ -608,6 +699,23 @@
         from { opacity: 0; }
         to { opacity: 1; }
     }
+
+    .vitals-card { margin-top: 20px; border-top: 1px solid #333; padding-top: 15px; }
+    .vital-row { display: flex; align-items: center; margin-bottom: 8px; gap: 10px; font-size: 14px; }
+    .vital-label { width: 40px; color: #888; font-weight: bold; }
+    .vital-bar-bg { flex: 1; height: 12px; background: #111; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
+    .vital-bar { height: 100%; transition: width 0.3s; }
+    .vital-bar-bg.red .vital-bar { background: #ff3300; }
+    .vital-bar-bg.yellow .vital-bar { background: #ffcc00; }
+    .vital-bar-bg.blue .vital-bar { background: #00ccff; }
+    .vital-val { width: 80px; text-align: right; font-family: monospace; }
+    
+    .spell-btn.heal {
+        width: 100%; padding: 10px; margin-top: 10px; background: #004400; color: #00ff00;
+        border: 1px solid #006600; cursor: pointer; font-family: 'Courier New', monospace; font-weight: bold;
+    }
+    .spell-btn.heal:hover:not(:disabled) { background: #006600; color: white; }
+    .spell-btn.heal:disabled { opacity: 0.3; cursor: default; }
 </style>
 
 @code {
@@ -657,6 +765,9 @@
     private bool ShowLevelUp { get; set; } = false;
     private bool ShowShop { get; set; } = false;
     private bool ShowGarage { get; set; } = false;
+    private bool ShowSurvivor { get; set; } = false;
+    private bool ShowMedic { get; set; } = false;
+    private bool ShowInventory { get; set; } = false;
     private bool HasSave { get; set; } = false;
 
     private List<MadMaxBlazor.Services.Item> ShopItems = new List<MadMaxBlazor.Services.Item>()
@@ -811,6 +922,7 @@
         if (savedState != null)
         {
             State.LoadFrom(savedState);
+            await UpdateJSStats();
         }
         ShowSplash = false;
     }
@@ -819,6 +931,7 @@
     {
         await Persistence.ClearSave();
         State.Reset();
+        await UpdateJSStats();
         ShowSplash = false;
     }
 
@@ -848,7 +961,16 @@
         { 
             str = State.GetTotalStat("STR"), 
             dex = State.GetTotalStat("DEX"),
+            con = State.GetTotalStat("CON"),
+            @int = State.GetTotalStat("INT"),
+            wis = State.GetTotalStat("WIS"),
+            cha = State.GetTotalStat("CHA"),
             weaponDamage = State.GetWeaponDamage(),
+            hp = State.Water,
+            stamina = State.Stamina,
+            maxStamina = State.MaxStamina,
+            mana = State.Mana,
+            maxMana = State.MaxMana,
             vArmor = State.VehicleArmorLevel,
             vWeapon = State.VehicleWeaponLevel,
             vEngine = State.VehicleEngineLevel
@@ -871,6 +993,13 @@
     }
 
     [JSInvokable]
+    public void OpenMedicUI()
+    {
+        ShowMedic = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
     public object GetCombatStats()
     {
         return new 
@@ -890,5 +1019,69 @@
         State.OnChange -= StateHasChanged;
         State.OnLevelUp -= HandleLevelUp;
         objRef?.Dispose();
+    }
+
+    private async void CastHealInUI()
+    {
+        if (State.CastHeal())
+        {
+            await Persistence.SaveGame(State);
+            await UpdateJSStats();
+            await JSRuntime.InvokeVoidAsync("wastelandRenderer.updateHeroHP", State.Water, State.Mana, State.Stamina);
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task UpdateStamina(int amount)
+    {
+        State.UpdateStamina(amount);
+        await Persistence.SaveGame(State);
+    }
+
+    [JSInvokable]
+    public async Task UpdateHealth(int amount)
+    {
+        State.UpdateHealth(amount);
+        await Persistence.SaveGame(State);
+    }
+
+    [JSInvokable]
+    public async Task UpdateMana(int amount)
+    {
+        State.UpdateMana(amount);
+        await Persistence.SaveGame(State);
+    }
+
+    private async void HandleRefill()
+    {
+        if (State.RefillVitals())
+        {
+            await Persistence.SaveGame(State);
+            await UpdateJSStats();
+            await JSRuntime.InvokeVoidAsync("wastelandRenderer.updateHeroHP", State.Water, State.Mana, State.Stamina);
+        }
+        ShowMedic = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleExitGame()
+    {
+        // 1. Force Save
+        await Persistence.SaveGame(State);
+        
+        // 2. Hide all overlays
+        ShowPaperdoll = false;
+        ShowSurvivor = false;
+        ShowInventory = false;
+        ShowShop = false;
+        ShowGarage = false;
+        ShowMedic = false;
+        
+        // 3. Show Splash
+        ShowSplash = true;
+        HasSave = true; // Ensure they can click Continue
+        
+        StateHasChanged();
     }
 }
