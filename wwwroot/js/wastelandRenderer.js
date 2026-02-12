@@ -95,7 +95,7 @@ var wastelandRenderer = {
         });
 
         // Double-Click Combat Engagement
-        this.scene.onPointerObservable.add((pointerInfo) => {
+        this.scene.onPointerObservable.add(async (pointerInfo) => {
             if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOUBLETAP) {
                 var pickResult = pointerInfo.pickInfo;
                 if (pickResult.hit && WastelandHero.isActive) {
@@ -124,6 +124,16 @@ var wastelandRenderer = {
                         }
                     }
 
+                    // Check Bandits/Survivors (Dungeon or Wasteland)
+                    if (!targetNPC) {
+                        for (var s of WastelandNPCs.survivors) {
+                            if (mesh === s || mesh.isDescendantOf(s)) {
+                                targetNPC = s;
+                                break;
+                            }
+                        }
+                    }
+
                     if (!targetNPC) {
                         for (var s of WastelandNPCs.shopkeepers) {
                             if (mesh === s || mesh.isDescendantOf(s)) {
@@ -138,10 +148,31 @@ var wastelandRenderer = {
                         }
                     }
 
+                    // Check Dungeon Entrance
+                    if (!targetNPC) {
+                        for (var r of WastelandWorld.ruins) {
+                            if (mesh === r || mesh.isDescendantOf(r)) {
+                                if (r.data && r.data.type === "DUNGEON_ENTRANCE") {
+                                    console.log("ENTERING DUNGEON!");
+                                    await WastelandDungeon.generate(r.data.dungeonId);
+                                    await WastelandDungeon.enter(this);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+
+                    // Check Dungeon Exit
+                    if (WastelandDungeon.isActive && mesh === WastelandDungeon.exitPoint) {
+                        WastelandDungeon.exit(this);
+                        return;
+                    }
+
                     if (targetNPC) {
                         console.log("COMBAT ENGAGED!");
-                        targetNPC.isFeral = true;
                         WastelandHero.combatTarget = targetNPC;
+                        if (targetNPC.data) targetNPC.data.isFeral = true;
+                        else targetNPC.isFeral = true;
                         WastelandHero.combatTurn = 0; // Reset turn to Hero
                         WastelandHero.combatTimer = 0.5; // Quick first strike
                     }
@@ -173,6 +204,7 @@ var wastelandRenderer = {
         this.initRadar(scene);
         WastelandCombat.init(scene);
         WastelandCombatUI.init(scene);
+        WastelandDungeon.init(scene);
 
         // Terrain & Props
         WastelandWorld.init(scene);
@@ -210,11 +242,20 @@ var wastelandRenderer = {
     },
 
     getHeightAt: function (x, z) {
+        if (WastelandDungeon.isActive) {
+            var ray = new BABYLON.Ray(new BABYLON.Vector3(x, 20, z), new BABYLON.Vector3(0, -1, 0), 40);
+            var hit = this.scene.pickWithRay(ray, (mesh) => {
+                return mesh.name === "room_floor" || mesh.name === "dungeon_exit" || mesh.name === "corridor_floor";
+            });
+            if (hit && hit.hit) return hit.pickedPoint.y;
+            return 0.1;
+        }
         return WastelandWorld.getHeightAt(x, z);
     },
 
     // O(1) Math-based height for NPCs (No Raycast)
     getHeightFast: function (x, z) {
+        if (WastelandDungeon.isActive) return 0.1;
         return WastelandWorld.calculateHeight(x, z);
     },
 
@@ -420,13 +461,26 @@ var wastelandRenderer = {
         if (this.fuel < 0) this.fuel = 0;
 
         // 10. Scrap Collection (Simple Distance Check)
-        if (WastelandWorld.scrapFields) {
+        if (WastelandWorld.scrapFields && !WastelandDungeon.isActive) {
             for (let i = 0; i < WastelandWorld.scrapFields.length; i++) {
                 let s = WastelandWorld.scrapFields[i];
                 if (s.isEnabled() && BABYLON.Vector3.Distance(this.vehicle.position, s.position) < 5) {
                     s.setEnabled(false);
                     this.scrap += 10;
                     if (this.dotNetRef) this.dotNetRef.invokeMethodAsync("AddScrap", 10);
+                }
+            }
+        }
+
+        // Dungeon Scrap Collection
+        if (WastelandDungeon.isActive && WastelandHero.mesh) {
+            for (let m of WastelandDungeon.meshes) {
+                if (m.data && m.data.type === "SCRAP" && m.isEnabled()) {
+                    if (BABYLON.Vector3.Distance(WastelandHero.mesh.position, m.position) < 3) {
+                        m.setEnabled(false);
+                        this.scrap += (m.data.amount || 25);
+                        if (this.dotNetRef) this.dotNetRef.invokeMethodAsync("AddScrap", m.data.amount || 25);
+                    }
                 }
             }
         }
@@ -475,6 +529,33 @@ var wastelandRenderer = {
                     if (this.dotNetRef) {
                         if (type === "GARAGE") this.dotNetRef.invokeMethodAsync("OpenGarage");
                         else this.dotNetRef.invokeMethodAsync("OpenShop");
+                    }
+                }
+            }
+        }
+
+        // Dungeon Proximity Check (Entry)
+        if (!WastelandDungeon.isActive) {
+            for (var r of WastelandWorld.ruins) {
+                if (r.data && r.data.type === "DUNGEON_ENTRANCE") {
+                    if (BABYLON.Vector3.Distance(this.vehicle.position, r.position) < 15) {
+                        if (this.inputMap["e"]) {
+                            this.inputMap["e"] = false;
+                            (async () => {
+                                await WastelandDungeon.generate(r.data.dungeonId);
+                                await WastelandDungeon.enter(this);
+                            })();
+                        }
+                    }
+                }
+            }
+        } else {
+            // Dungeon Proximity Check (Exit)
+            if (WastelandHero.mesh && WastelandDungeon.exitPoint) {
+                if (BABYLON.Vector3.Distance(WastelandHero.mesh.position, WastelandDungeon.exitPoint.position) < 3) {
+                    if (this.inputMap["e"]) {
+                        this.inputMap["e"] = false;
+                        WastelandDungeon.exit(this);
                     }
                 }
             }

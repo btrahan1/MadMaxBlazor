@@ -12,6 +12,44 @@ var WastelandHero = {
     // Core references passed on demand or stored?
     // Passing 'core' to update/toggle is cleaner for context.
 
+    initMesh: async function (scene) {
+        if (this.mesh) return;
+        try {
+            console.log("Loading WastelandHero.glb...");
+            let result = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "WastelandHero.glb", scene);
+            this.mesh = result.meshes[0];
+            this.mesh.scaling = new BABYLON.Vector3(1.0, 1.0, 1.0);
+            this.mesh.rotationQuaternion = null;
+            this.mesh.rotation = BABYLON.Vector3.Zero();
+
+            this.limbs = {};
+            let allNodes = result.transformNodes.concat(result.meshes);
+            allNodes.forEach(m => {
+                m.checkCollisions = false;
+                m.isPickable = false;
+                if (m.rotationQuaternion) {
+                    m.rotation = m.rotationQuaternion.toEulerAngles();
+                    m.rotationQuaternion = null;
+                }
+                if (m.name.includes("leg_l_upper")) this.limbs.legL = m;
+                if (m.name.includes("leg_r_upper")) this.limbs.legR = m;
+                if (m.name.includes("arm_l_shoulder")) this.limbs.armL = m;
+                if (m.name.includes("arm_r_shoulder")) this.limbs.armR = m;
+            });
+        } catch (e) {
+            console.warn("Hero GLB not found, using generic box.", e);
+            this.mesh = BABYLON.MeshBuilder.CreateBox("GenericHero", { height: 1.8, width: 0.5, depth: 0.25 }, scene);
+        }
+    },
+
+    spawn: async function (scene, x, z) {
+        await this.initMesh(scene);
+        this.mesh.position.set(x, 1, z);
+        this.mesh.rotation = BABYLON.Vector3.Zero();
+        this.mesh.setEnabled(true);
+        this.isActive = true;
+    },
+
     toggleMode: async function (core) {
         if (!this.isActive) {
             // EXIT CAR -> ENTER HERO MODE
@@ -27,38 +65,7 @@ var WastelandHero = {
             var groundY = core.getHeightAt(carPos.x, carPos.z);
             carPos.y = groundY + 0.9;
 
-            // Load Mesh if needed
-            if (!this.mesh) {
-                try {
-                    console.log("Loading WastelandHero.glb...");
-                    let result = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "WastelandHero.glb", core.scene);
-                    this.mesh = result.meshes[0];
-
-                    // Fix Scale/Rot
-                    this.mesh.scaling = new BABYLON.Vector3(1.0, 1.0, 1.0);
-                    this.mesh.rotationQuaternion = null;
-                    this.mesh.rotation = BABYLON.Vector3.Zero();
-
-                    // Cache Limbs & Fix Quaternions
-                    this.limbs = {};
-                    let allNodes = result.transformNodes.concat(result.meshes);
-                    allNodes.forEach(m => {
-                        m.checkCollisions = false;
-                        m.isPickable = false;
-                        if (m.rotationQuaternion) {
-                            m.rotation = m.rotationQuaternion.toEulerAngles();
-                            m.rotationQuaternion = null;
-                        }
-                        if (m.name.includes("leg_l_upper")) this.limbs.legL = m;
-                        if (m.name.includes("leg_r_upper")) this.limbs.legR = m;
-                        if (m.name.includes("arm_l_shoulder")) this.limbs.armL = m;
-                        if (m.name.includes("arm_r_shoulder")) this.limbs.armR = m;
-                    });
-                } catch (e) {
-                    console.warn("Hero GLB not found, using generic box.", e);
-                    this.mesh = BABYLON.MeshBuilder.CreateBox("GenericHero", { height: 1.8, width: 0.5, depth: 0.25 }, core.scene);
-                }
-            }
+            await this.initMesh(core.scene);
 
             this.mesh.position = carPos;
             this.mesh.rotation = BABYLON.Vector3.Zero();
@@ -113,7 +120,11 @@ var WastelandHero = {
 
         // --- COMBAT LOOP ---
         if (this.combatTarget) {
-            var targetMesh = this.combatTarget.root || this.combatTarget.segments[0];
+            var targetMesh = this.combatTarget.root || (this.combatTarget.segments ? this.combatTarget.segments[0] : this.combatTarget);
+            if (!targetMesh) {
+                this.combatTarget = null;
+                return;
+            }
             var dist = BABYLON.Vector3.Distance(this.mesh.position, targetMesh.position);
 
             // Face Target
@@ -174,33 +185,48 @@ var WastelandHero = {
                         window.updateHud(0, Math.round(dist * 10), this.mesh.rotation.y, this.hp, core.scrap);
                     }
 
-                    // Check NPC Death
                     if (this.combatTarget.hp <= 0) {
                         console.log("TARGET DESTROYED!");
 
-                        // Award XP (JS to C#)
+                        // Award XP (50 for Bandits) and Scrap (25)
                         if (core.dotNetRef) {
                             core.dotNetRef.invokeMethodAsync("AddExperience", 50);
                         }
 
                         WastelandCombatUI.removeHealthBar(targetMesh);
 
-                        // Respawn logic (maintain population)
-                        var spawnRange = 1000;
-                        var minSpawnDist = 100;
-                        var rx = 0, rz = 0;
-                        do {
-                            rx = (Math.random() * spawnRange) - (spawnRange / 2);
-                            rz = (Math.random() * spawnRange) - (spawnRange / 2);
-                        } while (BABYLON.Vector3.Distance(this.mesh.position, new BABYLON.Vector3(rx, 0, rz)) < minSpawnDist);
-
+                        // Removal logic
                         if (this.combatTarget.root) {
                             this.combatTarget.root.dispose();
-                            WastelandNPCs.coyotes = WastelandNPCs.coyotes.filter(c => c !== this.combatTarget);
-                            WastelandNPCs.spawnCoyote(core.scene, core, rx, rz);
-                        } else {
+
+                            if (WastelandNPCs.coyotes.includes(this.combatTarget)) {
+                                WastelandNPCs.coyotes = WastelandNPCs.coyotes.filter(c => c !== this.combatTarget);
+
+                                // Respawn logic (maintain population in wasteland)
+                                var spawnRange = 1000;
+                                var minSpawnDist = 100;
+                                var rx = 0, rz = 0;
+                                do {
+                                    rx = (Math.random() * spawnRange) - (spawnRange / 2);
+                                    rz = (Math.random() * spawnRange) - (spawnRange / 2);
+                                } while (BABYLON.Vector3.Distance(this.mesh.position, new BABYLON.Vector3(rx, 0, rz)) < minSpawnDist);
+                                WastelandNPCs.spawnCoyote(core.scene, core, rx, rz);
+                            } else if (WastelandNPCs.survivors.includes(this.combatTarget)) {
+                                WastelandNPCs.survivors = WastelandNPCs.survivors.filter(s => s !== this.combatTarget);
+                                // No automatic respawn for survivors/dungeon bandits
+                            }
+                        } else if (this.combatTarget.segments) {
                             this.combatTarget.segments.forEach(s => s.dispose());
                             WastelandNPCs.snakes = WastelandNPCs.snakes.filter(s => s !== this.combatTarget);
+
+                            // Respawn logic for snakes
+                            var spawnRange = 1000;
+                            var minSpawnDist = 100;
+                            var rx = 0, rz = 0;
+                            do {
+                                rx = (Math.random() * spawnRange) - (spawnRange / 2);
+                                rz = (Math.random() * spawnRange) - (spawnRange / 2);
+                            } while (BABYLON.Vector3.Distance(this.mesh.position, new BABYLON.Vector3(rx, 0, rz)) < minSpawnDist);
                             WastelandNPCs.spawnSnake(core.scene, core, rx, rz);
                         }
                         this.combatTarget = null;
@@ -234,7 +260,13 @@ var WastelandHero = {
 
         if (moveVector.length() > 0) {
             moveVector.normalize().scaleInPlace(moveSpeed);
-            this.mesh.position.addInPlace(moveVector);
+
+            if (core.isDriving) {
+                this.mesh.position.addInPlace(moveVector);
+            } else {
+                // Foot collisions in dungeon or wasteland
+                this.mesh.moveWithCollisions(moveVector);
+            }
 
             // Animation
             this.animTimer += dt * 15;
