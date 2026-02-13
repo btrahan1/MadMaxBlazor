@@ -7,8 +7,13 @@ var WastelandWorld = {
     survivorCamps: [],
     banditCamps: [],
     scene: null, // Keep ref
+    updateTimer: 0,
 
-    init: function (scene) {
+    // Cached Materials
+    spikeMat: null,
+    rustMat: null,
+
+    init: function (scene, core) {
         this.scene = scene;
         this.createTerrain(scene);
         this.createVegetation(scene, 100);
@@ -17,8 +22,11 @@ var WastelandWorld = {
         this.createGasStations(scene, 3);
         this.createAbandonedCars(scene, 10);
         this.createSurvivorCamps(scene, 3);
-        this.createBanditCamps(scene, 3);
-        this.createMedicTent(scene, 15, 15);
+        this.banditCamps = [];
+        for (var i = 0; i < 8; i++) {
+            this.spawnSingleBanditCamp(scene, core, false);
+        }
+        this.createMedicTent(scene, 15, 15, core);
     },
 
     createTerrain: function (scene) {
@@ -360,7 +368,110 @@ var WastelandWorld = {
     },
 
     createBanditCamps: function (scene, count) {
-        // ... (existing code remains)
+        // Obsolete - now handled by spawnSingleBanditCamp in init
+    },
+
+    spawnSingleBanditCamp: function (scene, core, isRemote) {
+        var x, z;
+        if (isRemote) {
+            // Find a spot far from the vehicle
+            var angle = Math.random() * Math.PI * 2;
+            var dist = 600 + Math.random() * 400; // 600-1000m away
+            x = core.vehicle.position.x + Math.sin(angle) * dist;
+            z = core.vehicle.position.z + Math.cos(angle) * dist;
+        } else {
+            x = (Math.random() * 1600) - 800;
+            z = (Math.random() * 1600) - 800;
+        }
+
+        var y = this.getHeightAt(x, z);
+
+        var campRoot = new BABYLON.TransformNode("banditCamp", scene);
+        campRoot.position = new BABYLON.Vector3(x, y, z);
+
+        if (!this.spikeMat) {
+            this.spikeMat = new BABYLON.StandardMaterial("spikeMat", scene);
+            this.spikeMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+        }
+
+        if (!this.rustMat) {
+            this.rustMat = new BABYLON.StandardMaterial("banditRust", scene);
+            this.rustMat.diffuseColor = new BABYLON.Color3(0.3, 0.1, 0.05);
+        }
+
+        // Central Scrap Pile
+        var pile = BABYLON.MeshBuilder.CreateSphere("pile", { diameter: 8, slice: 0.5 }, scene);
+        pile.parent = campRoot;
+        pile.scaling.y = 0.5;
+        pile.material = this.rustMat;
+        pile.freezeWorldMatrix();
+
+        // Defensive Spikes
+        for (var j = 0; j < 6; j++) {
+            var angle = j * (Math.PI / 3);
+            var spike = BABYLON.MeshBuilder.CreateCylinder("spike", { diameterTop: 0.1, diameterBottom: 0.8, height: 5 }, scene);
+            spike.parent = campRoot;
+            spike.position.x = Math.sin(angle) * 5;
+            spike.position.z = Math.cos(angle) * 5;
+            spike.rotation.x = Math.PI / 6;
+            spike.rotation.y = angle;
+            spike.material = this.spikeMat;
+            spike.freezeWorldMatrix();
+        }
+
+        var blip = WastelandUI.registerBlip(pile, "Red", "bandit_camp");
+
+        var campObj = {
+            root: campRoot,
+            pile: pile,
+            blip: blip,
+            position: campRoot.position.clone(),
+            hasSpawned: false, // For vehicle ambush
+            guardians: []
+        };
+
+        // Spawn Human Guardians
+        for (var i = 0; i < 3; i++) {
+            var nx = x + (Math.random() - 0.5) * 10;
+            var nz = z + (Math.random() - 0.5) * 10;
+            var guardian = WastelandNPCs.createSurvivor(scene, nx, nz, true);
+            campObj.guardians.push(guardian);
+        }
+
+        this.banditCamps.push(campObj);
+    },
+
+    update: function (dt, core) {
+        this.updateTimer -= dt;
+        if (this.updateTimer > 0) return;
+        this.updateTimer = 1.0;
+
+        // Check for camp clearance
+        for (var i = this.banditCamps.length - 1; i >= 0; i--) {
+            var camp = this.banditCamps[i];
+
+            // Filter out dead/disposed guardians
+            camp.guardians = camp.guardians.filter(g => {
+                return g && !g.isDisposed() && g.hp > 0;
+            });
+
+            if (camp.guardians.length === 0) {
+                console.log("BANDIT CAMP CLEARED!");
+
+                // Cleanup blip
+                if (camp.blip && camp.blip.ui) camp.blip.ui.dispose();
+
+                // Dispose root
+                if (camp.root) camp.root.dispose();
+
+                this.banditCamps.splice(i, 1);
+
+                // Respawn new one far away if under cap
+                if (this.banditCamps.length < 10) {
+                    this.spawnSingleBanditCamp(this.scene, core, true);
+                }
+            }
+        }
     },
 
     createMedicTent: function (scene, x, z, core) {

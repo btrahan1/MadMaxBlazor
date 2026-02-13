@@ -158,7 +158,6 @@ var WastelandHero = {
                         // Hero Turn
                         this.swingTimer = 1.0;
 
-                        var stats = core.stats || { dex: 10, str: 10, weaponDamage: 0 };
                         var stats = core.stats || { dex: 10, str: 10, int: 10, weaponDamage: 0 };
                         var hitChance = 75 + stats.dex;
 

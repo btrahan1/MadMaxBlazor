@@ -138,6 +138,7 @@ var WastelandCombat = {
                 }
             }
         }
+
     },
 
     updateEnemies: function (dt, core) {
@@ -171,7 +172,18 @@ var WastelandCombat = {
             if (BABYLON.Vector3.Distance(core.vehicle.position, e.position) < 3.0) {
                 var now = Date.now();
                 if (now - this.lastRamTime > 1000) {
-                    core.fuel -= 10;
+                    var vHP = (core.stats && core.stats.vHP) || 100;
+                    vHP -= 10;
+                    if (vHP < 0) vHP = 0;
+
+                    // Update local stats for immediate HUD feedback
+                    if (core.stats) core.stats.vHP = vHP;
+
+                    // Sync to C#
+                    if (core.dotNetRef) {
+                        core.dotNetRef.invokeMethodAsync("UpdateVehicleHealth", vHP);
+                    }
+
                     this.lastRamTime = now;
                     var pushDir = core.vehicle.position.subtract(e.position).normalize();
                     core.velocity.addInPlace(pushDir.scale(10));
