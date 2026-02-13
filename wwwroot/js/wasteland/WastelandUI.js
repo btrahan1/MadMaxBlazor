@@ -66,10 +66,12 @@ var WastelandUI = {
 
         this.radarContainer.addControl(blip);
 
-        this.radarBlips.push({
+        var blipObj = {
             ui: blip,
             mesh: targetMesh
-        });
+        };
+        this.radarBlips.push(blipObj);
+        return blipObj;
     },
 
     update: function (vehicle, facingAngle) {

@@ -7,6 +7,8 @@ namespace MadMaxBlazor.Services
         public float Fuel { get; set; } = 100f;
         public float MaxFuel { get; set; } = 100f;
         public int Scrap { get; set; } = 0;
+        public int VehicleHealth { get; set; } = 100;
+        public int MaxVehicleHealth => 100 + (VehicleArmorLevel - 1) * 50;
         public int Water { get; set; } = 100; // HP
         public int MaxHealth => GetTotalStat("CON") * 10;
         public bool IsDead => Water <= 0;
@@ -138,6 +140,28 @@ namespace MadMaxBlazor.Services
             return true;
         }
 
+        public bool RepairVehicle()
+        {
+            int missingHP = MaxVehicleHealth - VehicleHealth;
+            if (missingHP <= 0) return true;
+
+            if (Scrap < missingHP) return false;
+
+            Scrap -= missingHP;
+            VehicleHealth = MaxVehicleHealth;
+
+            NotifyStateChanged();
+            return true;
+        }
+
+        public void UpdateVehicleHealth(int amount)
+        {
+            VehicleHealth = amount;
+            if (VehicleHealth < 0) VehicleHealth = 0;
+            if (VehicleHealth > MaxVehicleHealth) VehicleHealth = MaxVehicleHealth;
+            NotifyStateChanged();
+        }
+
         public void Reset()
         {
             Fuel = 100f;
@@ -168,6 +192,7 @@ namespace MadMaxBlazor.Services
             VehicleArmorLevel = 1;
             VehicleWeaponLevel = 1;
             VehicleEngineLevel = 1;
+            VehicleHealth = 100;
             MaxFuel = 100f;
             NotifyStateChanged();
         }
@@ -193,6 +218,7 @@ namespace MadMaxBlazor.Services
             VehicleArmorLevel = other.VehicleArmorLevel;
             VehicleWeaponLevel = other.VehicleWeaponLevel;
             VehicleEngineLevel = other.VehicleEngineLevel;
+            VehicleHealth = other.VehicleHealth;
             Inventory = other.Inventory != null ? new List<Item>(other.Inventory) : new List<Item>();
             if (other.Equipment != null)
             {
@@ -327,8 +353,9 @@ namespace MadMaxBlazor.Services
             if (component == "ARMOR") 
             {
                 VehicleArmorLevel++;
-                MaxFuel = VehicleArmorLevel == 2 ? 150f : 200f;
-                Fuel = MaxFuel; // Refill on upgrade
+                // Still increase MaxFuel slightly but main focus is health
+                MaxFuel = 100f + (VehicleArmorLevel - 1) * 25f; 
+                VehicleHealth = MaxVehicleHealth; // Fully repair on upgrade
             }
             if (component == "WEAPONS") VehicleWeaponLevel++;
 

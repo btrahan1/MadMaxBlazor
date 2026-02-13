@@ -145,7 +145,7 @@ var WastelandNPCs = {
             origin: new BABYLON.Vector3(x, 0, z),
             target: new BABYLON.Vector3(x + 5, 0, z + 5),
             animTime: Math.random() * 100,
-            isFeral: false,
+            isFeral: isBandit,
             visualTimer: 0
         };
         npc.hp = 25;
@@ -203,9 +203,6 @@ var WastelandNPCs = {
         var hat = BABYLON.MeshBuilder.CreateCylinder("hat", { diameterTop: 0.1, diameterBottom: 0.6, height: 0.4 }, scene);
         hat.parent = head; hat.position.y = 0.2; hat.material = clothMat;
 
-        var footMat = new BABYLON.StandardMaterial("footMat", scene);
-        footMat.diffuseColor = BABYLON.Color3.Black();
-
         var createLimb = (w, h, px, py, pz) => {
             var limb = BABYLON.MeshBuilder.CreateBox("limb", { width: w, height: h, depth: w }, scene);
             limb.parent = npc; limb.position = new BABYLON.Vector3(px, py, pz);
@@ -229,10 +226,7 @@ var WastelandNPCs = {
     },
 
     spawnFriendlyNPC: function (scene, core) {
-        // Wasteland Trader
         this.spawnTrader(scene, core);
-
-        // Mechanic (Garage)
         this.spawnMechanic(scene, core);
     },
 
@@ -240,13 +234,11 @@ var WastelandNPCs = {
         var x = 50, z = 50;
         var gH = core.getHeightAt(x, z);
 
-        // NPC Character (Rotates to face player)
         var npc = new BABYLON.TransformNode("trader_character", scene);
         npc.position = new BABYLON.Vector3(x, gH, z);
 
-        // Character Visuals (similar to shopkeeper)
         var clothMat = new BABYLON.StandardMaterial("traderCloth", scene);
-        clothMat.diffuseColor = new BABYLON.Color3(0.2, 0.6, 0.2); // Greenish
+        clothMat.diffuseColor = new BABYLON.Color3(0.2, 0.6, 0.2);
         var skinMat = new BABYLON.StandardMaterial("traderSkin", scene);
         skinMat.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.4);
 
@@ -255,55 +247,35 @@ var WastelandNPCs = {
         var head = BABYLON.MeshBuilder.CreateSphere("head", { diameter: 0.4 }, scene);
         head.parent = torso; head.position.y = 0.6; head.material = skinMat;
 
-        // Large Merchant Hat
         var hat = BABYLON.MeshBuilder.CreateCylinder("hat", { diameterTop: 0.8, diameterBottom: 0.8, height: 0.1 }, scene);
         hat.parent = head; hat.position.y = 0.2; hat.material = clothMat;
 
-        // Trading Post Building (Static sibling)
         var shopRoot = new BABYLON.TransformNode("tradingPost", scene);
         shopRoot.position = new BABYLON.Vector3(x, gH, z + 1.5);
 
         var scrapMat = new BABYLON.StandardMaterial("shopScrapMat", scene);
         scrapMat.diffuseColor = new BABYLON.Color3(0.3, 0.25, 0.2);
-
         var stallMat = new BABYLON.StandardMaterial("stallMat", scene);
         stallMat.diffuseColor = new BABYLON.Color3(0.4, 0.3, 0.2);
 
-        // Pillars
         var p1 = BABYLON.MeshBuilder.CreateBox("p1", { width: 0.2, height: 4, depth: 0.2 }, scene);
         p1.parent = shopRoot; p1.position = new BABYLON.Vector3(-2, 2, -1.5); p1.material = scrapMat;
         var p2 = p1.clone("p2"); p2.position.x = 2;
         var p3 = p1.clone("p3"); p3.position.z = 1.5; p3.position.y = 1.6; p3.scaling.y = 0.8;
         var p4 = p3.clone("p4"); p4.position.x = -2;
 
-        // Shop Counter
         var counter = BABYLON.MeshBuilder.CreateBox("counter", { width: 4.2, height: 1.1, depth: 1.0 }, scene);
         counter.parent = shopRoot; counter.position = new BABYLON.Vector3(0, 0.55, -1.2);
-        counter.material = stallMat; // Reusing stallMat for wood/rust look
+        counter.material = stallMat;
 
-        // Slanted Roof (Corrugated Metal)
         var roof = BABYLON.MeshBuilder.CreateBox("roof", { width: 4.6, height: 0.1, depth: 3.5 }, scene);
-        roof.parent = shopRoot;
-        roof.position = new BABYLON.Vector3(0, 3.8, 0);
-        roof.rotation.x = -0.15;
-        roof.material = scrapMat;
+        roof.parent = shopRoot; roof.position = new BABYLON.Vector3(0, 3.8, 0); roof.rotation.x = -0.15; roof.material = scrapMat;
 
-        // Side Walls
         var wallL = BABYLON.MeshBuilder.CreateBox("wallL", { width: 0.1, height: 3, depth: 3 }, scene);
         wallL.parent = shopRoot; wallL.position = new BABYLON.Vector3(-2.1, 1.5, 0.2); wallL.material = scrapMat;
         var wallR = wallL.clone("wallR"); wallR.position.x = 2.1;
-
-        // Back Wall
         var wallB = BABYLON.MeshBuilder.CreateBox("wallB", { width: 4.2, height: 2, depth: 0.1 }, scene);
         wallB.parent = shopRoot; wallB.position = new BABYLON.Vector3(0, 1, 1.6); wallB.material = scrapMat;
-
-        // Props on counter
-        var prop1 = BABYLON.MeshBuilder.CreateBox("p1", { size: 0.4 }, scene);
-        prop1.parent = counter; prop1.position = new BABYLON.Vector3(-1.2, 0.6, 0); prop1.material = scrapMat;
-        var prop2 = BABYLON.MeshBuilder.CreateCylinder("p2", { diameter: 0.3, height: 0.5 }, scene);
-        prop2.parent = counter; prop2.position = new BABYLON.Vector3(1.2, 0.7, 0.1);
-        var tintMat = new BABYLON.StandardMaterial("propMat", scene); tintMat.diffuseColor = BABYLON.Color3.Red();
-        prop2.material = tintMat;
 
         npc.data = { type: "SHOP", name: "Trader" };
         this.shopkeepers.push(npc);
@@ -314,13 +286,11 @@ var WastelandNPCs = {
         var x = -50, z = -50;
         var gH = core.getHeightAt(x, z);
 
-        // NPC Character (Rotates to face player)
         var npc = new BABYLON.TransformNode("mechanic_character", scene);
         npc.position = new BABYLON.Vector3(x, gH, z);
 
-        // Character Visuals
         var clothMat = new BABYLON.StandardMaterial("mechCloth", scene);
-        clothMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3); // Greasy Grey
+        clothMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
         var skinMat = new BABYLON.StandardMaterial("mechSkin", scene);
         skinMat.diffuseColor = new BABYLON.Color3(0.7, 0.5, 0.3);
 
@@ -329,36 +299,28 @@ var WastelandNPCs = {
         var head = BABYLON.MeshBuilder.CreateSphere("head", { diameter: 0.45 }, scene);
         head.parent = torso; head.position.y = 0.6; head.material = skinMat;
 
-        // Welding Mask
         var mask = BABYLON.MeshBuilder.CreateBox("mask", { width: 0.3, height: 0.4, depth: 0.1 }, scene);
         mask.parent = head; mask.position = new BABYLON.Vector3(0, 0, 0.2);
         var maskMat = new BABYLON.StandardMaterial("maskMat", scene);
-        maskMat.diffuseColor = BABYLON.Color3.Black();
-        mask.material = maskMat;
+        maskMat.diffuseColor = BABYLON.Color3.Black(); mask.material = maskMat;
 
-        // Garage Building (Static sibling)
         var garageRoot = new BABYLON.TransformNode("garageStruct", scene);
-        garageRoot.position = new BABYLON.Vector3(x, gH, z + 4.0);
-        garageRoot.rotation.y = Math.PI; // Face outwards
+        garageRoot.position = new BABYLON.Vector3(x, gH, z + 4.0); garageRoot.rotation.y = Math.PI;
 
         var darkMetal = new BABYLON.StandardMaterial("garageMetal", scene);
         darkMetal.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.15);
-
         var benchMat = new BABYLON.StandardMaterial("benchMat", scene);
         benchMat.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.25);
 
-        // 4 Large Pillars
         var gp1 = BABYLON.MeshBuilder.CreateBox("gp1", { width: 0.4, height: 6, depth: 0.4 }, scene);
         gp1.parent = garageRoot; gp1.position = new BABYLON.Vector3(-4, 3, -3); gp1.material = darkMetal;
         var gp2 = gp1.clone("gp2"); gp2.position.x = 4;
         var gp3 = gp1.clone("gp3"); gp3.position.z = 3;
         var gp4 = gp2.clone("gp4"); gp4.position.z = 3;
 
-        // Flat Roof
         var gRoof = BABYLON.MeshBuilder.CreateBox("gRoof", { width: 9, height: 0.2, depth: 7 }, scene);
         gRoof.parent = garageRoot; gRoof.position.y = 6; gRoof.material = darkMetal;
 
-        // The Lift (Two posts)
         var lift1 = BABYLON.MeshBuilder.CreateCylinder("l1", { diameter: 0.3, height: 4 }, scene);
         lift1.parent = garageRoot; lift1.position = new BABYLON.Vector3(-2.5, 2, 0); lift1.material = benchMat;
         var lift2 = lift1.clone("l2"); lift2.position.x = 2.5;
@@ -366,24 +328,14 @@ var WastelandNPCs = {
         var arm = BABYLON.MeshBuilder.CreateBox("arm", { width: 6, height: 0.2, depth: 0.5 }, scene);
         arm.parent = garageRoot; arm.position.y = 1.5; arm.material = benchMat;
 
-        // Workbench (Keep for details)
         var bench = BABYLON.MeshBuilder.CreateBox("workbench", { width: 2.5, height: 1, depth: 1.2 }, scene);
-        bench.parent = garageRoot; bench.position = new BABYLON.Vector3(-3, 0.5, -2);
-        bench.material = benchMat;
-
-        // Engine Part on bench
-        var enginePart = BABYLON.MeshBuilder.CreateBox("enginePart", { size: 0.6 }, scene);
-        enginePart.parent = bench; enginePart.position.y = 0.8;
-        var partMat = new BABYLON.StandardMaterial("partMat", scene);
-        partMat.diffuseColor = new BABYLON.Color3(0.6, 0.6, 0.6);
-        enginePart.material = partMat;
+        bench.parent = garageRoot; bench.position = new BABYLON.Vector3(-3, 0.5, -2); bench.material = benchMat;
 
         npc.data = { type: "GARAGE", name: "Mechanic" };
         this.shopkeepers.push(npc);
         core.createBlip(npc, "Orange", "mechanic");
     },
 
-    // --- BOSSES & MECS ---
     spawnSpider: function (scene, x, z, core) {
         BABYLON.SceneLoader.ImportMeshAsync("", "./", "Wasteland_Widow.glb", scene).then((result) => {
             var root = result.meshes[0];
@@ -406,7 +358,7 @@ var WastelandNPCs = {
             this.spiders.push({
                 root: root, legs: legs, t: Math.random() * 100,
                 speed: 4.0, dir: new BABYLON.Vector3(0, 0, 1),
-                targetIndex: Math.floor(Math.random() * 5) // Simplified
+                targetIndex: Math.floor(Math.random() * 5)
             });
         });
     },
@@ -433,7 +385,7 @@ var WastelandNPCs = {
         BABYLON.SceneLoader.ImportMeshAsync("", "./", "NuclearHydra.glb", scene).then((result) => {
             var root = result.meshes[0];
             var groundY = core.getHeightAt(x, z);
-            root.position = new BABYLON.Vector3(x, groundY + 10, z); // Starts in air
+            root.position = new BABYLON.Vector3(x, groundY + 10, z);
             root.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
 
             var parts = {};
@@ -452,11 +404,7 @@ var WastelandNPCs = {
             });
 
             this.hydras.push({
-                root: root,
-                parts: parts,
-                t: 0,
-                hp: 500,
-                speed: 8.0,
+                root: root, parts: parts, t: 0, hp: 500, speed: 8.0,
                 dir: new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize()
             });
 
@@ -478,12 +426,10 @@ var WastelandNPCs = {
             var w = BABYLON.MeshBuilder.CreateCylinder("bw", { diameter: 2.5, height: 1.2 }, scene);
             w.rotation.z = Math.PI / 2; w.parent = parent; w.position = new BABYLON.Vector3(wx, -1, wz); w.material = wheelMat;
         };
-        addWheel(cab, 2, 1.5); addWheel(cab, -2, 1.5);
-        addWheel(cab, 2, -1.5); addWheel(cab, -2, -1.5);
+        addWheel(cab, 2, 1.5); addWheel(cab, -2, 1.5); addWheel(cab, 2, -1.5); addWheel(cab, -2, -1.5);
 
         var trailer = BABYLON.MeshBuilder.CreateCylinder("trailer", { diameter: 3.5, height: 12 }, scene);
-        trailer.rotation.x = Math.PI / 2;
-        trailer.material = new BABYLON.StandardMaterial("tankMat", scene);
+        trailer.rotation.x = Math.PI / 2; trailer.material = new BABYLON.StandardMaterial("tankMat", scene);
         trailer.material.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.75);
 
         var tChassis = new BABYLON.TransformNode("tChassis", scene);
@@ -491,12 +437,10 @@ var WastelandNPCs = {
         addWheel(tChassis, 2, -4); addWheel(tChassis, -2, -4);
 
         trailer.position = new BABYLON.Vector3(x, 10, z - 8);
-
         this.bosses.push({ cab: cab, trailer: trailer, dir: new BABYLON.Vector3(0, 0, 1), speed: 5.0, hp: 50, targetIndex: 0 });
         core.createBlip(cab, "Orange", "enemy");
     },
 
-    // --- GLOBAL UPDATE ---
     update: function (dt, core) {
         this.updateFauna(dt, core);
         this.updateSurvivors(dt, core);
@@ -511,51 +455,35 @@ var WastelandNPCs = {
         this.shopkeepers.forEach(s => {
             var gH = core.getHeightFast(s.position.x, s.position.z);
             s.position.y = gH;
-
-            // Look at player if close
             var dist = BABYLON.Vector3.Distance(s.position, core.vehicle.position);
             if (dist < 15) {
                 var dir = core.vehicle.position.subtract(s.position);
-                dir.y = 0;
-                s.rotation.y = Math.atan2(dir.x, dir.z);
+                dir.y = 0; s.rotation.y = Math.atan2(dir.x, dir.z);
             }
         });
     },
 
     updateFauna: function (dt, core) {
-        // Snakes
         this.snakes.forEach(s => {
             var head = s.segments[0];
-
             if (s.isFeral && WastelandHero.mesh) {
-                // Chase Hero
                 var targetDir = WastelandHero.mesh.position.subtract(head.position);
-                targetDir.y = 0;
-                var dist = targetDir.length();
-                targetDir.normalize();
-
+                targetDir.y = 0; var dist = targetDir.length(); targetDir.normalize();
                 if (dist > 1.5) {
                     s.dir = BABYLON.Vector3.Lerp(s.dir, targetDir, 5.0 * dt).normalize();
-                    var chaseMove = s.dir.scale(s.speed * dt);
-                    head.position.addInPlace(chaseMove);
+                    head.position.addInPlace(s.dir.scale(s.speed * dt));
                 }
-
-                // Strike Visual (Lunge)
                 if (s.visualTimer > 0) {
-                    s.visualTimer -= dt * 5;
-                    var b = Math.sin(s.visualTimer * Math.PI);
+                    s.visualTimer -= dt * 5; var b = Math.sin(s.visualTimer * Math.PI);
                     head.scaling.setAll(1.0 + b * 0.4);
-                } else {
-                    head.scaling.setAll(1.0);
-                }
+                } else head.scaling.setAll(1.0);
             } else {
                 s.turnTimer -= dt;
                 if (s.turnTimer <= 0) {
                     s.dir = new BABYLON.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
                     s.turnTimer = 2.0 + Math.random() * 3.0;
                 }
-                var normalMove = s.dir.scale(s.speed * dt);
-                head.position.addInPlace(normalMove);
+                head.position.addInPlace(s.dir.scale(s.speed * dt));
             }
             head.position.y = core.getHeightFast(head.position.x, head.position.z) + 0.2;
             head.rotation.y = Math.atan2(s.dir.x, s.dir.z);
@@ -569,22 +497,14 @@ var WastelandNPCs = {
                     curr.position = BABYLON.Vector3.Lerp(curr.position, target, 15 * dt);
                     curr.position.y = core.getHeightFast(curr.position.x, curr.position.z) + 0.2;
                 }
-                // Face the segment in front
-                if (diff.length() > 0.01) {
-                    curr.rotation.y = Math.atan2(diff.x, diff.z);
-                }
+                if (diff.length() > 0.01) curr.rotation.y = Math.atan2(diff.x, diff.z);
             }
         });
 
-        // Coyotes
         this.coyotes.forEach(c => {
             if (c.isFeral && WastelandHero.mesh) {
-                // Chase Hero
                 var targetDir = WastelandHero.mesh.position.subtract(c.root.position);
-                targetDir.y = 0;
-                var dist = targetDir.length();
-                targetDir.normalize();
-
+                targetDir.y = 0; var dist = targetDir.length(); targetDir.normalize();
                 if (dist > 2.5) {
                     c.dir = BABYLON.Vector3.Lerp(c.dir, targetDir, 5.0 * dt).normalize();
                     c.root.position.addInPlace(c.dir.scale(4.0 * dt));
@@ -602,32 +522,24 @@ var WastelandNPCs = {
             var angle = Math.atan2(c.dir.x, c.dir.z);
             c.root.rotation.y = BABYLON.Scalar.Lerp(c.root.rotation.y, angle, 5.0 * dt);
 
-            // Coyote Lunge Visual (Only Head)
             if (c.visualTimer > 0) {
-                c.visualTimer -= dt * 5;
-                var b = Math.sin(c.visualTimer * Math.PI);
-                c.head.position.z = 0.6 + (b * 0.4); // Pokes head forward
-                c.head.scaling.setAll(1.0 + (b * 0.2));
-            } else {
-                c.head.position.z = 0.6;
-                c.head.scaling.setAll(1.0);
-            }
+                c.visualTimer -= dt * 5; var b = Math.sin(c.visualTimer * Math.PI);
+                c.head.position.z = 0.6 + (b * 0.4); c.head.scaling.setAll(1.0 + (b * 0.2));
+            } else { c.head.position.z = 0.6; c.head.scaling.setAll(1.0); }
 
             c.animTime += dt * 10.0;
             var amp = 0.5;
-            c.legs[0].rotation.x = Math.sin(c.animTime) * amp;
-            c.legs[3].rotation.x = Math.sin(c.animTime) * amp;
-            c.legs[1].rotation.x = Math.cos(c.animTime) * amp;
-            c.legs[2].rotation.x = Math.cos(c.animTime) * amp;
+            c.legs[0].rotation.x = Math.sin(c.animTime) * amp; c.legs[3].rotation.x = Math.sin(c.animTime) * amp;
+            c.legs[1].rotation.x = Math.cos(c.animTime) * amp; c.legs[2].rotation.x = Math.cos(c.animTime) * amp;
         });
     },
 
     updateSurvivors: function (dt, core) {
         var gravity = 9.8;
         this.survivors.forEach(s => {
+            if (s.isDisposed()) return;
             var gH = core.getHeightFast(s.position.x, s.position.z);
             var floor = gH + 1.0;
-
             if (s.position.y > floor + 0.05) s.position.y -= gravity * dt;
             else s.position.y = floor;
 
@@ -638,47 +550,47 @@ var WastelandNPCs = {
                     var angle = Math.random() * Math.PI * 2;
                     s.data.target.x = s.data.origin.x + Math.sin(angle) * 8;
                     s.data.target.z = s.data.origin.z + Math.cos(angle) * 8;
-                } else {
-                    s.data.state = "idle"; s.data.timer = 2 + Math.random() * 2;
-                }
+                } else { s.data.state = "idle"; s.data.timer = 2 + Math.random() * 2; }
             }
 
-            if (s.data.isFeral && WastelandHero.mesh) {
-                // Chase Hero
+            var isChasing = false;
+            // BANDIT AI OPTIMIZATION: Ignore player in car, proximity check
+            if (s.data.isFeral && WastelandHero.mesh && !core.isDriving) {
                 var targetDir = WastelandHero.mesh.position.subtract(s.position);
                 targetDir.y = 0;
                 var dist = targetDir.length();
-                targetDir.normalize();
 
-                if (dist > 2.5) {
-                    s.position.addInPlace(targetDir.scale(4 * dt));
-                    var desiredAngle = Math.atan2(targetDir.x, targetDir.z);
-                    s.rotation.y = BABYLON.Scalar.Lerp(s.rotation.y, desiredAngle, 10 * dt);
+                if (dist < 60) {
+                    isChasing = true;
+                    targetDir.normalize();
 
-                    s.data.animTime += dt * 10;
-                    var sin = Math.sin(s.data.animTime);
-                    s.limbs.la.rotation.x = sin * 0.5; s.limbs.ra.rotation.x = -sin * 0.5;
-                    s.limbs.ll.rotation.x = -sin * 0.5; s.limbs.rl.rotation.x = sin * 0.5;
-                } else {
-                    // Face Hero while attacking
-                    var angle = Math.atan2(targetDir.x, targetDir.z);
-                    s.rotation.y = BABYLON.Scalar.Lerp(s.rotation.y, angle, 10 * dt);
+                    if (dist > 2.5) {
+                        s.position.addInPlace(targetDir.scale(4 * dt));
+                        var desiredAngle = Math.atan2(targetDir.x, targetDir.z);
+                        s.rotation.y = BABYLON.Scalar.Lerp(s.rotation.y, desiredAngle, 10 * dt);
 
-                    // Attack Swing (Visual Only)
-                    if (s.data.visualTimer > 0) {
-                        s.data.visualTimer -= dt * 5;
-                        var swing = Math.sin(s.data.visualTimer * Math.PI);
-                        s.limbs.ra.rotation.x = -1.5 * swing; // Thrust arm
-                        s.limbs.la.rotation.x = 0.5 * swing;
+                        s.data.animTime += dt * 10;
+                        var sin = Math.sin(s.data.animTime);
+                        s.limbs.la.rotation.x = sin * 0.5; s.limbs.ra.rotation.x = -sin * 0.5;
+                        s.limbs.ll.rotation.x = -sin * 0.5; s.limbs.rl.rotation.x = sin * 0.5;
                     } else {
-                        // Reset Pose
-                        s.limbs.la.rotation.x *= 0.9;
-                        s.limbs.ra.rotation.x *= 0.9;
-                        s.limbs.ll.rotation.x *= 0.9;
-                        s.limbs.rl.rotation.x *= 0.9;
+                        var angle = Math.atan2(targetDir.x, targetDir.z);
+                        s.rotation.y = BABYLON.Scalar.Lerp(s.rotation.y, angle, 10 * dt);
+
+                        if (s.data.visualTimer > 0) {
+                            s.data.visualTimer -= dt * 5;
+                            var swing = Math.sin(s.data.visualTimer * Math.PI);
+                            s.limbs.ra.rotation.x = -1.5 * swing;
+                            s.limbs.la.rotation.x = 0.5 * swing;
+                        } else {
+                            s.limbs.la.rotation.x *= 0.9; s.limbs.ra.rotation.x *= 0.9;
+                            s.limbs.ll.rotation.x *= 0.9; s.limbs.rl.rotation.x *= 0.9;
+                        }
                     }
                 }
-            } else if (s.data.state === "walk") {
+            }
+
+            if (!isChasing && s.data.state === "walk") {
                 var dx = s.data.target.x - s.position.x, dz = s.data.target.z - s.position.z;
                 var dist = Math.sqrt(dx * dx + dz * dz);
                 if (dist < 0.5) s.data.state = "idle";
@@ -696,7 +608,7 @@ var WastelandNPCs = {
                     s.limbs.la.rotation.x = sin * 0.5; s.limbs.ra.rotation.x = -sin * 0.5;
                     s.limbs.ll.rotation.x = -sin * 0.5; s.limbs.rl.rotation.x = sin * 0.5;
                 }
-            } else {
+            } else if (!isChasing) {
                 Object.values(s.limbs).forEach(l => l.rotation.x *= 0.9);
             }
         });
@@ -719,8 +631,7 @@ var WastelandNPCs = {
 
     updateHelis: function (dt, core) {
         this.helis.forEach(h => {
-            var move = h.dir.scale(h.speed * dt);
-            h.root.position.addInPlace(move);
+            h.root.position.addInPlace(h.dir.scale(h.speed * dt));
             var gH = core.getHeightFast(h.root.position.x, h.root.position.z);
             h.root.position.y = BABYLON.Scalar.Lerp(h.root.position.y, gH + 6.0, 2.0 * dt);
             h.root.rotation.y = Math.atan2(h.dir.x, h.dir.z);
@@ -732,17 +643,14 @@ var WastelandNPCs = {
 
     updateBosses: function (dt, core) {
         this.bosses.forEach(b => {
-            var move = b.dir.scale(b.speed * dt);
-            b.cab.position.addInPlace(move);
+            b.cab.position.addInPlace(b.dir.scale(b.speed * dt));
             b.cab.position.y = core.getHeightFast(b.cab.position.x, b.cab.position.z) + 2.0;
-
             var targetAngle = Math.atan2(b.dir.x, b.dir.z);
             var diff = targetAngle - b.cab.rotation.y;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
             b.cab.rotation.y += diff * 1.0 * dt;
 
-            // Simple Trailer articulation
             var hitch = b.cab.position.add(new BABYLON.Vector3(Math.sin(b.cab.rotation.y), 0, Math.cos(b.cab.rotation.y)).scale(-5));
             var diffT = hitch.subtract(b.trailer.position);
             if (diffT.length() > 0.5) {
@@ -756,50 +664,36 @@ var WastelandNPCs = {
     updateHydras: function (dt, core) {
         this.hydras.forEach(h => {
             h.t += dt;
-
-            // Movement: Slowly circle/follow player at height
             var dist = BABYLON.Vector3.Distance(h.root.position, core.vehicle.position);
             var targetDir = core.vehicle.position.subtract(h.root.position).normalize();
             targetDir.y = 0;
-
-            if (dist > 50) {
-                h.dir = BABYLON.Vector3.Lerp(h.dir, targetDir, 0.5 * dt).normalize();
-            } else {
-                // Circle behavior
+            if (dist > 50) h.dir = BABYLON.Vector3.Lerp(h.dir, targetDir, 0.5 * dt).normalize();
+            else {
                 var right = BABYLON.Vector3.Cross(targetDir, BABYLON.Vector3.Up());
                 h.dir = BABYLON.Vector3.Lerp(h.dir, right, 0.5 * dt).normalize();
             }
-
             h.root.position.addInPlace(h.dir.scale(h.speed * dt));
             var gH = core.getHeightFast(h.root.position.x, h.root.position.z);
             var targetH = gH + 15 + Math.sin(h.t * 0.5) * 5;
             h.root.position.y = BABYLON.Scalar.Lerp(h.root.position.y, targetH, dt);
             h.root.rotation.y = Math.atan2(h.dir.x, h.dir.z);
 
-            // Wing Animation
             var flap = Math.sin(h.t * 3.0);
             if (h.parts.wingL1) h.parts.wingL1.rotation.z = 0.3 + flap * 0.4;
             if (h.parts.wingL2) h.parts.wingL2.rotation.z = flap * 0.5;
             if (h.parts.wingR1) h.parts.wingR1.rotation.z = -0.3 - flap * 0.4;
             if (h.parts.wingR2) h.parts.wingR2.rotation.z = -flap * 0.5;
 
-            // Neck Weaving
             var weave = Math.sin(h.t * 1.5);
             if (h.parts.neckC) { h.parts.neckC.rotation.y = weave * 0.2; h.parts.neckC.rotation.x = 0.4 + weave * 0.1; }
             if (h.parts.neckL) { h.parts.neckL.rotation.y = -0.5 + weave * 0.3; h.parts.neckL.rotation.x = weave * 0.2; }
             if (h.parts.neckR) { h.parts.neckR.rotation.y = 0.5 + weave * 0.3; h.parts.neckR.rotation.x = -weave * 0.2; }
 
-            // Heads look at player
             var lookAtPlayer = (head) => {
                 if (!head) return;
-                var currentRot = head.rotation.clone();
                 head.lookAt(core.vehicle.position);
-                // Constrain lookAt if needed, or just let it be creepy
-                // head.rotation.x = currentRot.x; // Keep pitch if preferred
             };
-            lookAtPlayer(h.parts.headC);
-            lookAtPlayer(h.parts.headL);
-            lookAtPlayer(h.parts.headR);
+            lookAtPlayer(h.parts.headC); lookAtPlayer(h.parts.headL); lookAtPlayer(h.parts.headR);
         });
     }
 };

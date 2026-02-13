@@ -11,7 +11,7 @@ var wastelandRenderer = {
     speedRatio: 0.5,
     isDriving: true,
     lastSpawnTime: 0,
-    stats: { str: 10, dex: 10, int: 10, wis: 10, weaponDamage: 0, stamina: 100, maxStamina: 100, mana: 100, maxMana: 100 },
+    stats: { str: 10, dex: 10, int: 10, wis: 10, weaponDamage: 0, stamina: 100, maxStamina: 100, mana: 100, maxMana: 100, vHP: 100, vMaxHP: 100 },
 
     updateStats: function (s) {
         this.stats = s;
@@ -224,7 +224,7 @@ var wastelandRenderer = {
         WastelandDungeon.init(scene);
 
         // Terrain & Props
-        WastelandWorld.init(scene);
+        WastelandWorld.init(scene, this);
         this.ground = WastelandWorld.ground;
 
         // Fauna
@@ -356,6 +356,7 @@ var wastelandRenderer = {
         this.updateRadar();
         WastelandNPCs.update(dt, this);
         WastelandCombat.update(dt, this);
+        WastelandWorld.update(dt, this);
         WastelandHero.update(dt, this);
 
         var accelRate = isTurbo ? baseAccel : (baseAccel * 0.5);
@@ -595,11 +596,11 @@ var wastelandRenderer = {
                     if (d < minDist) minDist = d;
                 }
             }
-            var maxFuel = 100;
-            if (this.stats && this.stats.vArmor) {
-                maxFuel = this.stats.vArmor == 2 ? 150 : (this.stats.vArmor == 3 ? 200 : 100);
-            }
-            window.updateHud(Math.round(this.speed), Math.round(minDist), this.facingAngle, this.fuel, this.scrap, maxFuel);
+            var vHP = (this.stats && this.stats.vHP) || 100;
+            var vMaxHP = (this.stats && this.stats.vMaxHP) || 100;
+            var maxFuel = (this.stats && this.stats.maxFuel) || 100;
+
+            window.updateHud(Math.round(this.speed), Math.round(minDist), this.facingAngle, this.fuel, this.scrap, maxFuel, vHP, vMaxHP);
         }
 
         this.frame = (this.frame || 0) + 1;
