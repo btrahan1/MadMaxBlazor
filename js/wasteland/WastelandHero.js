@@ -281,9 +281,10 @@ var WastelandHero = {
         WastelandCombatUI.showSkillUI(this.combatTarget !== null);
 
         if (this.combatTarget) {
+            var maxHP = (core.stats && core.stats.maxHealth) || 100;
             var maxStam = (core.stats && core.stats.maxStamina) || 100;
             var maxMana = (core.stats && core.stats.maxMana) || 100;
-            WastelandCombatUI.updateHealthBar(this.mesh, this.hp);
+            WastelandCombatUI.updateHealthBar(this.mesh, (this.hp / maxHP) * 100);
             WastelandCombatUI.updateStaminaBar(this.mesh, (this.stamina / maxStam) * 100);
             WastelandCombatUI.updateManaBar(this.mesh, (this.mana / maxMana) * 100);
         } else {
@@ -377,7 +378,7 @@ var WastelandHero = {
     },
 
     revive: function (core) {
-        this.hp = 100;
+        this.hp = (core.stats && core.stats.maxHealth) || 100;
         this.stamina = (core.stats && core.stats.maxStamina) || 100;
         this.mana = (core.stats && core.stats.maxMana) || 100;
         this.sentDeathSignal = false;
@@ -419,7 +420,8 @@ var WastelandHero = {
             console.log("CASTING HEAL");
             this.mana -= wis;
             this.hp += wis;
-            if (this.hp > 100) this.hp = 100;
+            var maxHP = (core.stats && core.stats.maxHealth) || 100;
+            if (this.hp > maxHP) this.hp = maxHP;
 
             WastelandCombatUI.showDamage(this.mesh, "HEALED!");
 

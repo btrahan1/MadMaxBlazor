@@ -238,8 +238,10 @@ var WastelandNPCs = {
 
     spawnTrader: function (scene, core) {
         var x = 50, z = 50;
-        var npc = new BABYLON.TransformNode("trader_root", scene);
         var gH = core.getHeightAt(x, z);
+
+        // NPC Character (Rotates to face player)
+        var npc = new BABYLON.TransformNode("trader_character", scene);
         npc.position = new BABYLON.Vector3(x, gH, z);
 
         // Character Visuals (similar to shopkeeper)
@@ -257,12 +259,51 @@ var WastelandNPCs = {
         var hat = BABYLON.MeshBuilder.CreateCylinder("hat", { diameterTop: 0.8, diameterBottom: 0.8, height: 0.1 }, scene);
         hat.parent = head; hat.position.y = 0.2; hat.material = clothMat;
 
-        // Stall
-        var stall = BABYLON.MeshBuilder.CreateBox("stall", { width: 3, height: 1.2, depth: 1.5 }, scene);
-        stall.parent = npc; stall.position = new BABYLON.Vector3(0, 0.6, 1.2);
+        // Trading Post Building (Static sibling)
+        var shopRoot = new BABYLON.TransformNode("tradingPost", scene);
+        shopRoot.position = new BABYLON.Vector3(x, gH, z + 1.5);
+
+        var scrapMat = new BABYLON.StandardMaterial("shopScrapMat", scene);
+        scrapMat.diffuseColor = new BABYLON.Color3(0.3, 0.25, 0.2);
+
         var stallMat = new BABYLON.StandardMaterial("stallMat", scene);
         stallMat.diffuseColor = new BABYLON.Color3(0.4, 0.3, 0.2);
-        stall.material = stallMat;
+
+        // Pillars
+        var p1 = BABYLON.MeshBuilder.CreateBox("p1", { width: 0.2, height: 4, depth: 0.2 }, scene);
+        p1.parent = shopRoot; p1.position = new BABYLON.Vector3(-2, 2, -1.5); p1.material = scrapMat;
+        var p2 = p1.clone("p2"); p2.position.x = 2;
+        var p3 = p1.clone("p3"); p3.position.z = 1.5; p3.position.y = 1.6; p3.scaling.y = 0.8;
+        var p4 = p3.clone("p4"); p4.position.x = -2;
+
+        // Shop Counter
+        var counter = BABYLON.MeshBuilder.CreateBox("counter", { width: 4.2, height: 1.1, depth: 1.0 }, scene);
+        counter.parent = shopRoot; counter.position = new BABYLON.Vector3(0, 0.55, -1.2);
+        counter.material = stallMat; // Reusing stallMat for wood/rust look
+
+        // Slanted Roof (Corrugated Metal)
+        var roof = BABYLON.MeshBuilder.CreateBox("roof", { width: 4.6, height: 0.1, depth: 3.5 }, scene);
+        roof.parent = shopRoot;
+        roof.position = new BABYLON.Vector3(0, 3.8, 0);
+        roof.rotation.x = -0.15;
+        roof.material = scrapMat;
+
+        // Side Walls
+        var wallL = BABYLON.MeshBuilder.CreateBox("wallL", { width: 0.1, height: 3, depth: 3 }, scene);
+        wallL.parent = shopRoot; wallL.position = new BABYLON.Vector3(-2.1, 1.5, 0.2); wallL.material = scrapMat;
+        var wallR = wallL.clone("wallR"); wallR.position.x = 2.1;
+
+        // Back Wall
+        var wallB = BABYLON.MeshBuilder.CreateBox("wallB", { width: 4.2, height: 2, depth: 0.1 }, scene);
+        wallB.parent = shopRoot; wallB.position = new BABYLON.Vector3(0, 1, 1.6); wallB.material = scrapMat;
+
+        // Props on counter
+        var prop1 = BABYLON.MeshBuilder.CreateBox("p1", { size: 0.4 }, scene);
+        prop1.parent = counter; prop1.position = new BABYLON.Vector3(-1.2, 0.6, 0); prop1.material = scrapMat;
+        var prop2 = BABYLON.MeshBuilder.CreateCylinder("p2", { diameter: 0.3, height: 0.5 }, scene);
+        prop2.parent = counter; prop2.position = new BABYLON.Vector3(1.2, 0.7, 0.1);
+        var tintMat = new BABYLON.StandardMaterial("propMat", scene); tintMat.diffuseColor = BABYLON.Color3.Red();
+        prop2.material = tintMat;
 
         npc.data = { type: "SHOP", name: "Trader" };
         this.shopkeepers.push(npc);
@@ -271,8 +312,10 @@ var WastelandNPCs = {
 
     spawnMechanic: function (scene, core) {
         var x = -50, z = -50;
-        var npc = new BABYLON.TransformNode("mechanic_root", scene);
         var gH = core.getHeightAt(x, z);
+
+        // NPC Character (Rotates to face player)
+        var npc = new BABYLON.TransformNode("mechanic_character", scene);
         npc.position = new BABYLON.Vector3(x, gH, z);
 
         // Character Visuals
@@ -293,11 +336,39 @@ var WastelandNPCs = {
         maskMat.diffuseColor = BABYLON.Color3.Black();
         mask.material = maskMat;
 
-        // Workbench
-        var bench = BABYLON.MeshBuilder.CreateBox("workbench", { width: 2.5, height: 1, depth: 1.2 }, scene);
-        bench.parent = npc; bench.position = new BABYLON.Vector3(0, 0.5, 1.2);
+        // Garage Building (Static sibling)
+        var garageRoot = new BABYLON.TransformNode("garageStruct", scene);
+        garageRoot.position = new BABYLON.Vector3(x, gH, z + 4.0);
+        garageRoot.rotation.y = Math.PI; // Face outwards
+
+        var darkMetal = new BABYLON.StandardMaterial("garageMetal", scene);
+        darkMetal.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.15);
+
         var benchMat = new BABYLON.StandardMaterial("benchMat", scene);
         benchMat.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.25);
+
+        // 4 Large Pillars
+        var gp1 = BABYLON.MeshBuilder.CreateBox("gp1", { width: 0.4, height: 6, depth: 0.4 }, scene);
+        gp1.parent = garageRoot; gp1.position = new BABYLON.Vector3(-4, 3, -3); gp1.material = darkMetal;
+        var gp2 = gp1.clone("gp2"); gp2.position.x = 4;
+        var gp3 = gp1.clone("gp3"); gp3.position.z = 3;
+        var gp4 = gp2.clone("gp4"); gp4.position.z = 3;
+
+        // Flat Roof
+        var gRoof = BABYLON.MeshBuilder.CreateBox("gRoof", { width: 9, height: 0.2, depth: 7 }, scene);
+        gRoof.parent = garageRoot; gRoof.position.y = 6; gRoof.material = darkMetal;
+
+        // The Lift (Two posts)
+        var lift1 = BABYLON.MeshBuilder.CreateCylinder("l1", { diameter: 0.3, height: 4 }, scene);
+        lift1.parent = garageRoot; lift1.position = new BABYLON.Vector3(-2.5, 2, 0); lift1.material = benchMat;
+        var lift2 = lift1.clone("l2"); lift2.position.x = 2.5;
+
+        var arm = BABYLON.MeshBuilder.CreateBox("arm", { width: 6, height: 0.2, depth: 0.5 }, scene);
+        arm.parent = garageRoot; arm.position.y = 1.5; arm.material = benchMat;
+
+        // Workbench (Keep for details)
+        var bench = BABYLON.MeshBuilder.CreateBox("workbench", { width: 2.5, height: 1, depth: 1.2 }, scene);
+        bench.parent = garageRoot; bench.position = new BABYLON.Vector3(-3, 0.5, -2);
         bench.material = benchMat;
 
         // Engine Part on bench
