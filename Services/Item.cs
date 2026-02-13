@@ -19,7 +19,8 @@ namespace MadMaxBlazor.Services
         
         public string GetIcon()
         {
-            return Slot switch
+            if (string.IsNullOrEmpty(Slot)) return "❓";
+            var icon = Slot.Trim().ToUpper() switch
             {
                 "HEAD" => "🪖",
                 "CHEST" => "👕",
@@ -30,6 +31,24 @@ namespace MadMaxBlazor.Services
                 "OFF" => "🛡️",
                 "GLOVES" => "🧤",
                 _ => "📦"
+            };
+            return icon;
+        }
+
+        public Item Clone()
+        {
+            Console.WriteLine($"Cloning item: {Name} (Slot: {Slot})");
+            return new Item
+            {
+                Name = this.Name,
+                Description = this.Description,
+                Slot = this.Slot,
+                Cost = this.Cost,
+                BaseDamage = this.BaseDamage,
+                BonusStr = this.BonusStr,
+                BonusDex = this.BonusDex,
+                BonusCon = this.BonusCon,
+                BonusInt = this.BonusInt
             };
         }
     }

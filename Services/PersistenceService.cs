@@ -9,6 +9,12 @@ namespace MadMaxBlazor.Services
         private readonly IJSRuntime _jsRuntime;
         private const string SaveKey = "MadMaxBlazor_SaveData";
 
+        private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            WriteIndented = true
+        };
+
         public PersistenceService(IJSRuntime jsRuntime)
         {
             _jsRuntime = jsRuntime;
@@ -16,7 +22,7 @@ namespace MadMaxBlazor.Services
 
         public async Task SaveGame(GameState state)
         {
-            var json = JsonSerializer.Serialize(state);
+            var json = JsonSerializer.Serialize(state, _jsonOptions);
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", SaveKey, json);
             Console.WriteLine("Game Saved.");
         }
@@ -27,7 +33,7 @@ namespace MadMaxBlazor.Services
             {
                 var json = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", SaveKey);
                 if (string.IsNullOrEmpty(json)) return null;
-                return JsonSerializer.Deserialize<GameState>(json);
+                return JsonSerializer.Deserialize<GameState>(json, _jsonOptions);
             }
             catch (Exception ex)
             {

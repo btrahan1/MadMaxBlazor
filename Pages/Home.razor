@@ -146,7 +146,7 @@
                     </div>
 
                     <div class="inventory-card">
-                        <h3>INVENTORY</h3>
+                        <h3>INVENTORY (@State.Inventory.Count)</h3>
                         <div class="inv-scroll">
                             @foreach (var item in State.Inventory)
                             {
@@ -596,19 +596,32 @@
     /* .item-cost { color: gold; font-size: 14px; } */
 
     /* Paperdoll Extended */
-    .paperdoll-window.wide { width: 800px; }
-    .equipment-card, .inventory-card { flex: 1; background: #222; padding: 15px; border: 1px solid #333; }
-    .equip-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-    .equip-slot { 
-        height: 60px; background: #111; border: 1px solid #444; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: pointer;
+    .paperdoll-window.wide { width: 900px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+    .paperdoll-content { display: flex; gap: 15px; flex: 1; overflow: hidden; padding-bottom: 10px; }
+    
+    .stats-card, .equipment-card, .inventory-card { 
+        flex: 1; min-width: 250px; background: #222; padding: 15px; border: 1px solid #333; 
+        display: flex; flex-direction: column; height: 500px;
     }
-    .slot-label { position: absolute; top: 2px; left: 5px; font-size: 10px; color: #555; }
-    .inv-scroll { height: 300px; overflow-y: auto; }
+    
+    .equip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; overflow-y: auto; }
+    .equip-slot { 
+        height: 65px; background: #111; border: 1px solid #444; display: flex; flex-direction: column; 
+        align-items: center; justify-content: center; position: relative; cursor: pointer; transition: all 0.2s;
+    }
+    .equip-slot:hover { border-color: gold; background: #222; }
+    .slot-label { position: absolute; top: 2px; left: 5px; font-size: 10px; color: #666; font-weight: bold; }
+    
+    .inv-scroll { flex: 1; overflow-y: auto; padding-right: 5px; }
+    .inv-scroll::-webkit-scrollbar { width: 6px; }
+    .inv-scroll::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    
     .inv-item { 
-        padding: 8px; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 10px; align-items: center;
+        padding: 10px; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 12px; align-items: center;
+        transition: background 0.2s;
     }
     .inv-item:hover { background: #333; }
-    .equip-hint { font-size: 10px; color: #00ccff; }
+    .equip-hint { font-size: 10px; color: #00ccff; margin-left: auto; }
 
     /* Level Up Popup */
     .level-up-popup {
@@ -860,7 +873,9 @@
     {
         if (State.Scrap >= item.Cost)
         {
-            State.BuyItem(item);
+            // Clone the item so each purchase is a unique instance with a unique ID
+            var newItem = item.Clone();
+            State.BuyItem(newItem);
             await Persistence.SaveGame(State);
             StateHasChanged();
         }
