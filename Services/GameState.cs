@@ -8,6 +8,7 @@ namespace MadMaxBlazor.Services
         public float MaxFuel { get; set; } = 100f;
         public int Scrap { get; set; } = 0;
         public int Water { get; set; } = 100; // HP
+        public int MaxHealth => GetTotalStat("CON") * 10;
         public bool IsDead => Water <= 0;
 
         public int Level { get; set; } = 1;
@@ -19,9 +20,9 @@ namespace MadMaxBlazor.Services
         public int Constitution { get; set; } = 10;
         public int Intelligence { get; set; } = 10;
         public int Stamina { get; set; } = 100;
-        public int MaxStamina { get; set; } = 100;
+        public int MaxStamina => GetTotalStat("CON") * 10;
         public int Mana { get; set; } = 100;
-        public int MaxMana { get; set; } = 100;
+        public int MaxMana => GetTotalStat("INT") * 10;
         public int Wisdom { get; set; } = 10;
         public int Charisma { get; set; } = 10;
 
@@ -76,7 +77,7 @@ namespace MadMaxBlazor.Services
         {
             Water = hp;
             if (Water < 0) Water = 0;
-            if (Water > 100) Water = 100;
+            if (Water > MaxHealth) Water = MaxHealth;
             NotifyStateChanged();
         }
 
@@ -100,11 +101,11 @@ namespace MadMaxBlazor.Services
         {
             int wisdom = GetTotalStat("WIS");
             if (Mana < wisdom) return false;
-            if (Water >= 100) return false;
+            if (Water >= MaxHealth) return false;
 
             Mana -= wisdom;
             Water += wisdom;
-            if (Water > 100) Water = 100;
+            if (Water > MaxHealth) Water = MaxHealth;
             
             NotifyStateChanged();
             return true;
@@ -112,7 +113,7 @@ namespace MadMaxBlazor.Services
 
         public void Revive()
         {
-            Water = 100;
+            Water = MaxHealth;
             Stamina = MaxStamina;
             Mana = MaxMana;
             NotifyStateChanged();
@@ -120,7 +121,7 @@ namespace MadMaxBlazor.Services
 
         public bool RefillVitals()
         {
-            int missingHP = 100 - Water;
+            int missingHP = MaxHealth - Water;
             int missingStam = MaxStamina - Stamina;
             int missingMana = MaxMana - Mana;
             int totalCost = missingHP + missingStam + missingMana;
@@ -129,7 +130,7 @@ namespace MadMaxBlazor.Services
             if (Scrap < totalCost) return false;
 
             Scrap -= totalCost;
-            Water = 100;
+            Water = MaxHealth;
             Stamina = MaxStamina;
             Mana = MaxMana;
 
@@ -188,9 +189,7 @@ namespace MadMaxBlazor.Services
             Wisdom = other.Wisdom;
             Charisma = other.Charisma;
             Stamina = other.Stamina;
-            MaxStamina = other.MaxStamina;
             Mana = other.Mana;
-            MaxMana = other.MaxMana;
             VehicleArmorLevel = other.VehicleArmorLevel;
             VehicleWeaponLevel = other.VehicleWeaponLevel;
             VehicleEngineLevel = other.VehicleEngineLevel;

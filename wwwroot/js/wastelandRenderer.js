@@ -676,7 +676,8 @@ var wastelandRenderer = {
 
             // Force UI update if in combat
             if (WastelandHero.combatTarget) {
-                WastelandCombatUI.updateHealthBar(WastelandHero.mesh, hp);
+                var maxHP = (this.stats && this.stats.maxHealth) || 100;
+                WastelandCombatUI.updateHealthBar(WastelandHero.mesh, (hp / maxHP) * 100);
                 // Mana and Stamina bars are handled in the main WastelandHero cycle to avoid duplicate GUI updates
             }
         }

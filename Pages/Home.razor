@@ -92,20 +92,20 @@
                         <div class="vitals-card">
                             <div class="vital-row">
                                 <span class="vital-label">HP</span>
-                                <div class="vital-bar-bg red"><div class="vital-bar" style="width: @(State.Water)%;"></div></div>
-                                <span class="vital-val">@State.Water / 100</span>
+                                <div class="vital-bar-bg red"><div class="vital-bar" style="width: @(Math.Min(100, (double)State.Water / State.MaxHealth * 100))%;"></div></div>
+                                <span class="vital-val">@State.Water / @State.MaxHealth</span>
                             </div>
                             <div class="vital-row">
                                 <span class="vital-label">STAM</span>
-                                <div class="vital-bar-bg yellow"><div class="vital-bar" style="width: @(State.Stamina)%;"></div></div>
+                                <div class="vital-bar-bg yellow"><div class="vital-bar" style="width: @(Math.Min(100, (double)State.Stamina / State.MaxStamina * 100))%;"></div></div>
                                 <span class="vital-val">@State.Stamina / @State.MaxStamina</span>
                             </div>
                             <div class="vital-row">
                                 <span class="vital-label">MANA</span>
-                                <div class="vital-bar-bg blue"><div class="vital-bar" style="width: @(State.Mana)%;"></div></div>
+                                <div class="vital-bar-bg blue"><div class="vital-bar" style="width: @(Math.Min(100, (double)State.Mana / State.MaxMana * 100))%;"></div></div>
                                 <span class="vital-val">@State.Mana / @State.MaxMana</span>
                             </div>
-                            <button class="spell-btn heal" @onclick="CastHealInUI" disabled="@(State.Mana < State.GetTotalStat("WIS") || State.Water >= 100)">
+                            <button class="spell-btn heal" @onclick="CastHealInUI" disabled="@(State.Mana < State.GetTotalStat("WIS") || State.Water >= State.MaxHealth)">
                                 🩹 CAST HEAL (@State.GetTotalStat("WIS") MANA)
                             </button>
                         </div>
@@ -176,7 +176,7 @@
 
                 <div class="medic-cost">
                     @{
-                        int cost = (100 - State.Water) + (State.MaxStamina - State.Stamina) + (State.MaxMana - State.Mana);
+                        int cost = (State.MaxHealth - State.Water) + (State.MaxStamina - State.Stamina) + (State.MaxMana - State.Mana);
                     }
                     @if (cost > 0)
                     {
@@ -982,6 +982,7 @@
             cha = State.GetTotalStat("CHA"),
             weaponDamage = State.GetWeaponDamage(),
             hp = State.Water,
+            maxHealth = State.MaxHealth,
             stamina = State.Stamina,
             maxStamina = State.MaxStamina,
             mana = State.Mana,
